@@ -14,7 +14,7 @@ class Tx90ReachEnv(RobotTaskEnv):
 
     def __init__(self, render=False, reward_type="sparse"):
         self.sim = PyBullet(render=render)
-        self.robot = Tx90(self.sim, base_position=[-0.6, 0.0, 0.0])
+        self.robot = Tx90(self.sim, base_position=[0.0, 0.0, 0.0])
         self.task = Reach(
             self.sim,
             reward_type=reward_type,

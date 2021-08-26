@@ -7,13 +7,13 @@ from scipy.spatial.transform import Rotation as R
 class Tx90(PyBulletRobot):
 
 	JOINT_INDICES = [0, 1, 2, 3, 4, 5]
-	NEUTRAL_JOINT_VALUES = [0.00, 0.00, 1.514, 0.00, 0.00, 0.00]
-	JOINT_FORCES = [87, 87, 87, 87, 12, 120]
+	NEUTRAL_JOINT_VALUES = [0.0, 0.0, 1.514, 0.0, 0.0, 0]
+	JOINT_FORCES = [87, 87, 87, 87, 87, 87]
 	def __init__(self, sim, base_position = [0, 0, 0]):
 		module_path = Path(tx90_gym.__file__)
-		n_action = 5
+		n_action = 3
 		self.action_space = spaces.Box(-1.0, 1.0, shape=(n_action,))
-		self.eefID = 7
+		self.eefID = 8
 		super().__init__(
 			sim,
 			body_name="tx90",
@@ -24,23 +24,24 @@ class Tx90(PyBulletRobot):
 	def set_action(self, action):
 		action = action.copy()
 		action = np.clip(action, self.action_space.low, self.action_space.high)
-		ee_ctrl = action[:3] * 0.05
+		ee_ctrl = action[:3]*0.05
 		ee_position = self.get_ee_position()
 		target_ee_position = ee_position + ee_ctrl
-		Rx = action[3]
-		Ry = 90
-		Rz = action[4]
-		target_ee_ori = self.euler2quat(Rx, Ry, Rz) 
+		# Rx = action[3]
+		# Ry = 90
+		# Rz = action[4]
+		# target_ee_ori = self.euler2quat(Rx, Ry, Rz) 
 
 		 # Clip the height target. For some reason, it has a great impact on learning
 		target_ee_position[2] = max(0, target_ee_position[2]) 
-
-		target_angles = self._inverse_kinematics(position=target_ee_position, orientation=target_ee_ori)
+		self.euler2quat(0, 90, 0)
+		target_angles = self._inverse_kinematics(position=target_ee_position, orientation=self.euler2quat(0, 90, 0))#[1, 0, 0, 0])#target_ee_ori
 		self.control_joints(target_angles=target_angles)
 
 	def get_obs(self):
 		# end-effector position and velocity
 		ee_position = np.array(self.get_ee_position())
+		print("eepos : ", ee_position)
 		ee_velocity = np.array(self.get_ee_velocity())
 		obs = np.concatenate((ee_position, ee_velocity))
 
@@ -69,15 +70,29 @@ class Tx90(PyBulletRobot):
 		    List of joint values.
 		"""
 		inverse_kinematics = self.sim.inverse_kinematics(
-		    self.body_name, ee_link=9, position=position, orientation=orientation
+		    self.body_name, ee_link=8, position=position, orientation=orientation
 		)
 		# Replace the fingers coef by [0, 0]
-		inverse_kinematics = list(inverse_kinematics[0:7])
+		inverse_kinematics = list(inverse_kinematics[0:6])
+	
 		return inverse_kinematics
 
 	def set_joint_neutral(self):
 		"""Set the robot to its neutral pose."""
 		self.set_joint_values(self.NEUTRAL_JOINT_VALUES)
+
+	def set_ee_position(self, position):
+		"""Set the end-effector position. Can induce collisions.
+
+		Warning:
+			Make sure that the position does not induce collision.
+
+		Args:
+			position (x, y, z): Desired position of the gripper.
+		"""
+		# compute the new joint angles
+		angles = self._inverse_kinematics(position=position,  orientation=self.euler2quat(0, 90, 0))
+		self.set_joint_values(angles=angles)
 
 	def set_joint_values(self, angles):
 		"""Set the joint position of a body. Can induce collisions.

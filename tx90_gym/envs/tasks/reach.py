@@ -21,7 +21,7 @@ class Reach(Task):
 		self.goal_range_high = np.array([goal_range / 2, goal_range / 2, goal_range])
 		with self.sim.no_rendering():
 			self._create_scene()
-			self.sim.place_visualizer(target=[0, 0, 0], distance=0.9, yaw=45, pitch=-30)
+			self.sim.place_visualizer(target=[0, 0, 0], distance=1.5, yaw=45, pitch=-30)
 	def _create_scene(self):	
 		self.sim.create_plane(z_offset=-0.4)
 		self.sim.create_table(length=1.1, width=0.7, height=0.4, x_offset=-0.3)
@@ -29,8 +29,8 @@ class Reach(Task):
 			body_name="target",
 			radius=0.02,
 			mass=0.0,
-			ghost=True,
-			position=[0.0, 0.0, 0.0],
+			ghost=False,
+			position=[0.9, 0.3, 0.3],
 			rgba_color=[0.9, 0.1, 0.1, 0.3],
 		)
 	def get_goal(self):
@@ -48,8 +48,6 @@ class Reach(Task):
 		self.sim.set_base_pose("target", self.goal, [0, 0, 0, 1])
 
 	def _sample_goal(self):
-		"""Randomize goal."""
-		# print(self.np_random.get_seed())
 		goal = self.np_random.uniform(self.goal_range_low, self.goal_range_high)
 		return goal
 
@@ -58,6 +56,7 @@ class Reach(Task):
 		return (d < self.distance_threshold).astype(np.float32)
 
 	def compute_reward(self, achieved_goal, desired_goal, info):
+		print("ag :",achieved_goal, "dg : ",desired_goal)
 		d = distance(achieved_goal, desired_goal)
 		if self.reward_type == "sparse":
 			return -(d > self.distance_threshold).astype(np.float32)
