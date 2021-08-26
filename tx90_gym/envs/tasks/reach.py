@@ -30,7 +30,7 @@ class Reach(Task):
 			radius=0.02,
 			mass=0.0,
 			ghost=False,
-			position=[0.9, 0.3, 0.3],
+			position=[0.0, 0.0, 0.0],
 			rgba_color=[0.9, 0.1, 0.1, 0.3],
 		)
 	def get_goal(self):
@@ -45,7 +45,7 @@ class Reach(Task):
 
 	def reset(self):
 		self.goal = self._sample_goal()
-		self.sim.set_base_pose("target",[0.9, 0.3, 0.3], [0, 0, 0, 1]) # self.goal
+		self.sim.set_base_pose("target", self.goal, [0, 0, 0, 1]) #this is where env generate goal point
 
 	def _sample_goal(self):
 		goal = self.np_random.uniform(self.goal_range_low, self.goal_range_high)
