@@ -13,5 +13,5 @@ def run_env(env):
 
 
 def test_reach():
-    env = gym.make("PandaReach-v1")
+    env = gym.make("Tx90Reach-v1")
     run_env(env)
