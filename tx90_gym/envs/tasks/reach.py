@@ -23,8 +23,8 @@ class Reach(Task):
 			self._create_scene()
 			self.sim.place_visualizer(target=[0, 0, 0], distance=1.5, yaw=45, pitch=-30)
 	def _create_scene(self):	
-		self.sim.create_plane(z_offset=-0.4)
-		self.sim.create_table(length=1.1, width=0.7, height=0.4, x_offset=-0.3)
+		self.sim.create_plane(z_offset=0)
+		self.sim.create_table(length=0.5, width=0.5, height=0.5)
 		self.sim.create_sphere(
 			body_name="target",
 			radius=0.02,
@@ -45,7 +45,7 @@ class Reach(Task):
 
 	def reset(self):
 		self.goal = self._sample_goal()
-		self.sim.set_base_pose("target", self.goal, [0, 0, 0, 1])
+		self.sim.set_base_pose("target",[0.9, 0.3, 0.3], [0, 0, 0, 1]) # self.goal
 
 	def _sample_goal(self):
 		goal = self.np_random.uniform(self.goal_range_low, self.goal_range_high)
@@ -56,7 +56,7 @@ class Reach(Task):
 		return (d < self.distance_threshold).astype(np.float32)
 
 	def compute_reward(self, achieved_goal, desired_goal, info):
-		print("ag :",achieved_goal, "dg : ",desired_goal)
+		#print("ag :",achieved_goal, "dg : ",desired_goal)
 		d = distance(achieved_goal, desired_goal)
 		if self.reward_type == "sparse":
 			return -(d > self.distance_threshold).astype(np.float32)
