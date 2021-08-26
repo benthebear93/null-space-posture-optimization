@@ -28,8 +28,8 @@ def fk(jointpos):
     return ee_pos
 
 
-URDFPath="/home/benlee/Desktop/git/null-space-posture-optimization/urdf/tx902.urdf"
-BallPath="/home/benlee/Desktop/git/null-space-posture-optimization/urdf/ball.urdf"
+URDFPath="C:/Users/nswve/Desktop/git/null-space-posture-optimization/urdf/tx902.urdf"
+BallPath="C:/Users/nswve/Desktop/git/null-space-posture-optimization/urdf/ball.urdf"
 print("==========loading URDF==========")
 physicsClient = p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -45,9 +45,9 @@ joints, controlJoints = utils_tx90.setup_tx90(p, robotID) #get joints and contro
 joint_init = [deg2rad(0), deg2rad(0), deg2rad(90), deg2rad(0), deg2rad(0), deg2rad(0)]
 
 base = fk(joint_init)
-base_ball = [base[0], base[1], base[2]]
-ori = [0, 0, 0,0 ]
-ballId = p.loadURDF(BallPath, base_ball, ori)
+robotStartPos = base
+robotStartOrn = p.getQuaternionFromEuler([0,0,0])
+ballId =p.loadURDF(BallPath, robotStartPos, robotStartOrn, useFixedBase = True, flags=p.URDF_USE_INERTIA_FROM_FILE)
 a = 0
 while True:
     a = a+1
