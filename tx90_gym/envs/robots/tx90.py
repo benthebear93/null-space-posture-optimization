@@ -7,19 +7,23 @@ from scipy.spatial.transform import Rotation as R
 class Tx90(PyBulletRobot):
 
 	JOINT_INDICES = [0, 1, 2, 3, 4, 5]
-	NEUTRAL_JOINT_VALUES = [0.0, 0.0, 1.514, 0.0, 0.0, 0]
+	NEUTRAL_JOINT_VALUES = [0.0, 0.0, 1.5707, 0.0, 0.0, 0]
 	JOINT_FORCES = [87, 87, 87, 87, 87, 87]
 	def __init__(self, sim, base_position = [0, 0, 0]):
 		module_path = Path(tx90_gym.__file__)
 		n_action = 3
 		self.action_space = spaces.Box(-1.0, 1.0, shape=(n_action,))
-		self.eefID = 8
+		self.eefID = 7
 		super().__init__(
 			sim,
 			body_name="tx90",
 			file_name="/home/benlee/Desktop/git/null-space-posture-optimization/urdf/tx90.urdf",
 			base_position=base_position,
 		)
+		print("=========================================")
+		print("base : ", base_position)
+		print("eepos : ", np.array(self.get_ee_position()))
+		print("=========================================")
 
 	def set_action(self, action):
 		action = action.copy()
@@ -41,7 +45,6 @@ class Tx90(PyBulletRobot):
 	def get_obs(self):
 		# end-effector position and velocity
 		ee_position = np.array(self.get_ee_position())
-		print("eepos : ", ee_position)
 		ee_velocity = np.array(self.get_ee_velocity())
 		obs = np.concatenate((ee_position, ee_velocity))
 
@@ -70,7 +73,7 @@ class Tx90(PyBulletRobot):
 		    List of joint values.
 		"""
 		inverse_kinematics = self.sim.inverse_kinematics(
-		    self.body_name, ee_link=8, position=position, orientation=orientation
+		    self.body_name, self.eefID, position=position, orientation=orientation
 		)
 		# Replace the fingers coef by [0, 0]
 		inverse_kinematics = list(inverse_kinematics[0:6])

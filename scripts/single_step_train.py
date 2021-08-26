@@ -74,7 +74,7 @@ def main(args):
     )  # check frequency set for reward checking
 
     her_kwargs = dict(
-        online_sampling=True, n_sampled_goal=4, goal_selection_strategy="future", max_episode_length=100
+        online_sampling=True, n_sampled_goal=4, goal_selection_strategy="future", max_episode_length=10
     )
 
     model = SAC(
@@ -89,17 +89,17 @@ def main(args):
         learning_starts=1000,
         gamma=0.95,
         batch_size=256,
-        tensorboard_log=f"./logs/sac_her/{args.env_id}",
+        #tensorboard_log=f"./logs/sac_her/{args.env_id}",
         policy_kwargs=dict(net_arch=[128, 128, 128]),
     )
-
-    try:
-        model.learn(total_timesteps=2e5, callback=callback)
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        model.save(str(currpath) + f"/logs/sac_her/{args.env_id}")
-        model.save_replay_buffer(str(currpath) + f"/logs/sac_her/{args.env_id}/replay_buffer")
+    model.learn(total_timesteps=2e5, callback=callback)
+    # try:
+    #     model.learn(total_timesteps=2e5, callback=callback)
+    # except Exception as e:
+    #     print(f"Error: {e}")
+    # finally:
+    #     model.save(str(currpath) + f"/logs/sac_her/{args.env_id}")
+    #     model.save_replay_buffer(str(currpath) + f"/logs/sac_her/{args.env_id}/replay_buffer")
 
     env.close()
 
