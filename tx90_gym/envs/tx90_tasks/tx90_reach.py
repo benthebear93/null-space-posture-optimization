@@ -1,11 +1,11 @@
 from tx90_gym.envs.core import RobotTaskEnv
 from tx90_gym.pybullet import PyBullet
-from tx90_gym.envs.robots import Panda
+from tx90_gym.envs.robots import Tx90
 from tx90_gym.envs.tasks import Reach
 
 
 class Tx90ReachEnv(RobotTaskEnv):
-    """Reach task wih Panda robot.
+    """Reach task wih Tx90 robot.
 
     Args:
         render (bool, optional): Activate rendering. Defaults to False.
@@ -14,7 +14,7 @@ class Tx90ReachEnv(RobotTaskEnv):
 
     def __init__(self, render=False, reward_type="sparse"):
         self.sim = PyBullet(render=render)
-        self.robot = Panda(self.sim, block_gripper=True, base_position=[-0.6, 0.0, 0.0])
+        self.robot = Tx90(self.sim, base_position=[0.0, 0.0, 0.0])
         self.task = Reach(
             self.sim,
             reward_type=reward_type,
