@@ -233,7 +233,7 @@
   <link name="flange">
     <inertial>
       <mass value="12.98711"/>
-      <origin rpy="0.0 0.0 0.0" xyz="-0.000008 0.221181 0.173052"/>
+      <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
       <inertia ixx="0.425299" ixy="0.000005" ixz="-0.000004" iyy="0.452311" iyz="-0.002920" izz="0.054493"/>
     </inertial>
   </link>
@@ -251,13 +251,15 @@
   <link name="tool0">
     <inertial>
       <mass value="12.98711"/>
-      <origin rpy="0.0 0.0 0.0" xyz="-0.000008 0.221181 0.173052"/>
+      <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+      <!-- <origin rpy="0.0 0.0 0.0" xyz="-0.000008 0.221181 0.173052"/> -->
       <inertia ixx="0.425299" ixy="0.000005" ixz="-0.000004" iyy="0.452311" iyz="-0.002920" izz="0.054493"/>
     </inertial>
   </link>
-  <joint name="flange-tool0" type="fixed">
-    <origin rpy="0 0 0" xyz="0.191 0 0.1027"/>
-    <parent link="tool_link"/>
+  <joint name="tool_link-tool0" type="fixed">
+    <origin rpy="0 0 0" xyz="0.1 0 -0.2"/>
+    <!-- <origin rpy="0 0 0" xyz="0.174 -0.2179 -0.0705"/> z, y, x -->
+    <parent link="flange"/>
     <child link="tool0"/>
   </joint>
   <material name="aluminum">
