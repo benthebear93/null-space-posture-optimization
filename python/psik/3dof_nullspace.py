@@ -26,9 +26,9 @@ def FK(joint_params):
   joint_params = np.asarray(joint_params, dtype=float)
   q1, q2, q3 = joint_params
   TF = np.linalg.multi_dot([ 
-          Tx(q1),                   # Joint 1 to 2
-          Tx(q2),                   # Joint 2 to 3 
-          Rx(q3),                   # Joint 3 to E 
+          Rz(q1),Tx(a1),                   # Joint 1 to 2
+          Tx(q2),Tx(a2),                  # Joint 2 to 3 
+          Rx(q3),Tx(a3)                    # Joint 3 to E 
   ])
 
   return TF
@@ -38,9 +38,9 @@ def plot_robot(q_parms):
     q1, q2, q3 = q_parms
   
     T01 = np.eye(4)
-    T12 = Tx(q1)           # Joint 1 to 2
-    T23 = Tx(q2)                    # Joint 2 to 3
-    T3E = Tx(q3)          # Joint 3 to E
+    T12 = Rz(q1) @ Tx(a1)          # Joint 1 to 2
+    T23 = Rz(q2) @ Tx(a2)                   # Joint 2 to 3
+    T3E = Rz(q3) @ Tx(a3)         # Joint 3 to E
 
     T02 = T01 @ T12
     T03 = T01 @ T12 @ T23
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     pi_sym = sym.pi
 
     P = np.sin(np.linspace(-2.5,2.5))
-    jacobian_sym_func = jacobian_sym()
-    plot_robot(np.deg2rad([0,0,0]))
+    #jacobian_sym_func = jacobian_sym()
+    plot_robot(np.deg2rad([45,0,0]))
     # #get_cnfs(method_fun=null_space_method, q0=np.deg2rad([0,30,0,-20,0,45,0]))
     # get_cnfs_priority(method_fun=null_space_method, q0=np.deg2rad([0,30,0,-20,0,45]))
