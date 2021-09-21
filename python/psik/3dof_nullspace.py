@@ -27,11 +27,119 @@ def FK(joint_params):
   q1, q2, q3 = joint_params
   TF = np.linalg.multi_dot([ 
           Rz(q1),Tx(a1),                   # Joint 1 to 2
-          Tx(q2),Tx(a2),                  # Joint 2 to 3 
+          Rz(q2),Tx(a2),                  # Joint 2 to 3 
           Rx(q3),Tx(a3)                    # Joint 3 to E 
   ])
 
   return TF
+
+def jacobian_sym():
+  q1, q2, q3 = sym.symbols("q_1 q_2 q_3", real=True)  
+
+  variables = [q1, q2, q3]
+
+  TF =  Rz_sym(q1) @ Tx_sym(a1) @ \
+        Rz_sym(q2) @ Tx_sym(a2) @ \
+        Rz_sym(q3) @ Tx_sym(a3) 
+
+  R = TF[:3,:-1]
+  jacobian = sym.Matrix([])
+
+  for var in variables:
+      T_d  = sym.diff(TF, var) 
+
+      T    = T_d[0:3, -1] # translation?
+      R_d  = T_d[0:3, :-1] #Rotation diff
+      R_j  = R_d @ R.T  #Rotation jacobian
+      # print("var : ", var)
+      # print("R_j", R_j)
+
+      J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # [T_d; R_d]
+      jacobian = jacobian.col_insert(len(jacobian), J) # 6x1 translation + rotation diff 
+
+  return sym.lambdify([variables], jacobian, "numpy") # Convert a SymPy expression into a function that allows for fast numeric evaluation.
+
+def jacobian(joint_params):
+    variables = [*joint_params]
+    return jacobian_sym_func(variables)
+
+def simple_pseudo(q0, p_goal, time_step=0.01, max_iteration=3000, accuracy=0.0001):
+
+  assert np.linalg.norm(p_goal) <= np.sum([a1, a2, a3]), "Robot Length constraint violated"
+
+  q_n0 = q0
+  P = FK(q_n0)[:3,-1]
+
+  t_dot = p_goal - p # error of x,y,z,r,p,y?
+  e = np.linalg.norm(t_dot)
+
+  Tt = np.block([np.eye(6)])
+  q_n1 = q_n0
+  δt = time_step
+  i = 0
+  start_time = time.time()
+  while True:
+    if e < accuracy:
+      print(f"Accuracy of {accuracy} reached")
+      break
+    
+    p =  FK(q_n0)[:6,-1]
+    t_dot = p_goal - p # position error x, y, z 
+    e = np.linalg.norm(t_dot) # norm of x, y, z
+
+    J_inv = np.linalg.pinv( (Tt @ jacobian(q_n0)) )  # inv jacobian
+    q_dot = J_inv @ t_dot
+    q_n1 = q_n0 + (δt * q_dot)  
+    q_n0 = q_n1
+
+    i+=1
+    if (i > max_iteration):
+      print("No convergence")
+      break
+  end_time = time.time()
+  print(f"Total time taken {np.round(end_time - start_time, 4)} seconds\n")
+
+  return np.mod(q_n1, 2*np.pi) #  element-wise remainder of division
+
+def null_space_method(q0, p_goal, weights=[1,3,1], time_step=0.01, max_iteration=3000, accuracy=0.01):
+
+  assert np.linalg.norm(p_goal[:3]) <= 0.85*np.sum([a1, a2, a3, a4]), "Robot Length constraint violated"
+  q_n0 = q0
+  p = FK(q_n0)[:6,-1] # position 
+  print("        ")
+  print("p : ", p )
+  R = FK(q_n0)[:3] # Rotation matrix
+  rpy = euler_angles(R) # roll pitch yaw
+  p = np.array([p[0], p[1], p[2], rpy[0], rpy[1], rpy[2]])
+
+  t_dot = p_goal[:3] - p[:3]
+  H1 = [0, 0, 0, 0, 0, 0]
+  e = np.linalg.norm(t_dot)
+  Tt = np.block([ np.eye(6)])
+
+  q_n1 = q_n0
+  δt = time_step
+  q_dot_0 =  [ 4, 9, 1, 7, 9, 5] # [ 0.4, 0.9, 0.1, 0.7, 0.9, 0.5, 0.22]
+
+  i=0
+
+  start_time = time.time()
+  while True:
+    if (e < accuracy): 
+      break
+
+    fk = FK(q_n0)
+    rx, ry, rz = euler_angles(fk[:3,:3])
+    p = np.hstack([fk[:3,-1], [rx, ry, rz] ]) # current position and orientation
+
+    t_dot = p_goal[:3] - p[:3]
+    e = np.linalg.norm(t_dot)
+    w_inv = np.linalg.inv(np.diag(weights)) 
+
+    Jt = np.dot(Tt, jacobian(q_n0))
+    j_hash = w_inv @ Jt.T @ np.linalg.inv( Jt @ w_inv @ Jt.T )
+    q_dot = (j_hash @ t_dot) + (np.eye(3) - (j_hash @ Jt))@q_dot_0
+    q_n1 = q_n0 + (δt * q_dot)
 
 def plot_robot(q_parms):
 
@@ -49,7 +157,8 @@ def plot_robot(q_parms):
     x_pos = [T01[0,-1], T02[0,-1], T03[0,-1], T0E[0,-1]]
     y_pos = [T01[1,-1], T02[1,-1], T03[1,-1], T0E[1,-1]]
     z_pos = [T01[2,-1], T02[2,-1], T03[2,-1], T0E[2,-1]]
-  
+    print("q1: ", q1, " q2: ", q2, " q3: ", q3)
+    print("x_pos: ", T0E[0,-1], " y_pos: ", T0E[1,-1], " z_pos: ", T0E[2,-1])
     fig = go.Figure()
     fig.add_scatter3d(
         x=np.round(x_pos,2),
@@ -83,6 +192,25 @@ def plot_robot(q_parms):
     )
     pio.show(fig)
 
+def get_cnfs(method_fun, q0=np.deg2rad([0, 0, 0]), kwargs=dict()):
+  x = np.array([0.8272])
+  y = np.array([0.5963])
+  z = np.array([0])
+  rob_cnfs = []
+
+  start_time = time.time()
+  for (i, j, k) in zip (x, y, z):
+    pos = [i, j, k]
+
+    q = method_fun(q0, pos, **kwargs)
+    rob_cnfs.append(q)
+
+  end_time = time.time()
+  print(f"\n{np.round(end_time-start_time, 1)} seconds : Total time using {method_fun.__name__} \n")
+  if kwargs: print(f"\nParameters used: {kwargs}")
+
+  plot_robots(rob_cnfs, traj_x=x, traj_y=y, traj_z=z)
+
 if __name__ == "__main__":
     # Length of Links in meters
     a1, a2, a3, a4 = 0.36, 0.42, 0.4, 0.126
@@ -90,8 +218,9 @@ if __name__ == "__main__":
     pi = np.pi
     pi_sym = sym.pi
 
-    P = np.sin(np.linspace(-2.5,2.5))
+    # P = np.sin(np.linspace(-2.5,2.5))
     #jacobian_sym_func = jacobian_sym()
-    plot_robot(np.deg2rad([45,0,0]))
-    # #get_cnfs(method_fun=null_space_method, q0=np.deg2rad([0,30,0,-20,0,45,0]))
+    #plot_robot(np.deg2rad([0,15,36]))
+    jacobian_sym_func = jacobian_sym()
+    get_cnfs(method_fun=null_space_method, q0=np.deg2rad([0,30,0]))
     # get_cnfs_priority(method_fun=null_space_method, q0=np.deg2rad([0,30,0,-20,0,45]))
