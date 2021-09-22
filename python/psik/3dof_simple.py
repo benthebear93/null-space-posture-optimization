@@ -63,16 +63,17 @@ def jacobian(joint_params):
     variables = [*joint_params]
     return jacobian_sym_func(variables)
 
-def simple_pseudo(q0, p_goal, time_step=0.01, max_iteration=3000, accuracy=0.001):
+def simple_pseudo(q0, p_goal, time_step=0.01, max_iteration=3000, accuracy=0.0001):
 
   assert np.linalg.norm(p_goal) <= np.sum([a1, a2, a3]), "Robot Length constraint violated"
 
   q_n0 = q0
   p = FK(q_n0)[:3,-1]
+
   t_dot = p_goal - p # error of x,y,z,r,p,y?
   e = np.linalg.norm(t_dot)
 
-  Tt = np.block([np.eye(3), np.zeros((3,3))])
+  Tt = np.block([np.eye(6)])
   q_n1 = q_n0
   δt = time_step
   i = 0
@@ -82,12 +83,14 @@ def simple_pseudo(q0, p_goal, time_step=0.01, max_iteration=3000, accuracy=0.001
       print(f"Accuracy of {accuracy} reached")
       break
     
-    p =  FK(q_n0)[:3,-1]
+    p =  FK(q_n0)[:6,-1]
     print("q_n0: ", FK(q_n0))
-    t_dot = p_goal - p # position error x, y, z 
-    print("p: ", p , " p_goal: ", p_goal)
+    print("p: ", p[:3] , " p_goal: ", p_goal)
+    t_dot = p_goal - p[:3] # position error x, y
+
     print("t_dot : ", t_dot)
     e = np.linalg.norm(t_dot) # norm of x, y, z
+    print(Tt.shape,)
     J_inv = np.linalg.pinv( (Tt @ jacobian(q_n0)) )  # inv jacobian
     q_dot = J_inv @ t_dot
     q_n1 = q_n0 + (δt * q_dot)  
@@ -100,22 +103,23 @@ def simple_pseudo(q0, p_goal, time_step=0.01, max_iteration=3000, accuracy=0.001
   print(f"Total time taken {np.round(end_time - start_time, 4)} seconds\n")
 
   # print(np.mod(q_n1, 2*np.pi))
-  return q_n1 #np.mod(q_n1, 2*np.pi)# q_n1 #  element-wise remainder of division
+  return np.mod(q_n1, 2*np.pi)# q_n1 #  element-wise remainder of division
 
-def null_space_method(q0, p_goal, weights=[1,3,1], time_step=0.01, max_iteration=3000, accuracy=0.001):
+def null_space_method(q0, p_goal, weights=[1,3,1], time_step=0.01, max_iteration=3000, accuracy=0.01):
 
   assert np.linalg.norm(p_goal[:3]) <= 0.85*np.sum([a1, a2, a3, a4]), "Robot Length constraint violated"
   q_n0 = q0
-  p = FK(q_n0)[:3,-1] # position 
-  # R = FK(q_n0)[:3] # Rotation matrix
-
-  #rpy = euler_angles(R) # roll pitch yaw
-  #p = np.array([p[0], p[1], p[2], rpy[0], rpy[1], rpy[2]])
+  p = FK(q_n0)[:6,-1] # position 
+  print("        ")
+  print("p : ", p )
+  R = FK(q_n0)[:3] # Rotation matrix
+  rpy = euler_angles(R) # roll pitch yaw
+  p = np.array([p[0], p[1], p[2], rpy[0], rpy[1], rpy[2]])
 
   t_dot = p_goal[:3] - p[:3]
   H1 = [0, 0, 0, 0, 0, 0]
   e = np.linalg.norm(t_dot)
-  Tt = np.block([ np.eye(3)])
+  Tt = np.block([ np.eye(6)])
 
   q_n1 = q_n0
   δt = time_step
@@ -137,10 +141,60 @@ def null_space_method(q0, p_goal, weights=[1,3,1], time_step=0.01, max_iteration
     w_inv = np.linalg.inv(np.diag(weights)) 
 
     Jt = np.dot(Tt, jacobian(q_n0))
-    psd_J = Jt.T@(Jt.T@Jt + c)
-    # j_hash = w_inv @ Jt.T @ np.linalg.inv( Jt @ w_inv @ Jt.T )
-    # q_dot = (j_hash @ t_dot) + (np.eye(3) - (j_hash @ Jt))@q_dot_0
-    # q_n1 = q_n0 + (δt * q_dot)
+    j_hash = w_inv @ Jt.T @ np.linalg.inv( Jt @ w_inv @ Jt.T )
+    q_dot = (j_hash @ t_dot) + (np.eye(3) - (j_hash @ Jt))@q_dot_0
+    q_n1 = q_n0 + (δt * q_dot)
+
+def plot_robot(q_parms):
+
+    q1, q2, q3 = q_parms
+  
+    T01 = np.eye(4)
+    T12 = Rz(q1) @ Tx(a1)          # Joint 1 to 2
+    T23 = Rz(q2) @ Tx(a2)                   # Joint 2 to 3
+    T3E = Rz(q3) @ Tx(a3)         # Joint 3 to E
+
+    T02 = T01 @ T12
+    T03 = T01 @ T12 @ T23
+    T0E = T01 @ T12 @ T23 @ T3E
+  
+    x_pos = [T01[0,-1], T02[0,-1], T03[0,-1], T0E[0,-1]]
+    y_pos = [T01[1,-1], T02[1,-1], T03[1,-1], T0E[1,-1]]
+    z_pos = [T01[2,-1], T02[2,-1], T03[2,-1], T0E[2,-1]]
+    print("q1: ", q1, " q2: ", q2, " q3: ", q3)
+    print("x_pos: ", T0E[0,-1], " y_pos: ", T0E[1,-1], " z_pos: ", T0E[2,-1])
+    fig = go.Figure()
+    fig.add_scatter3d(
+        x=np.round(x_pos,2),
+        y=np.round(y_pos,2),
+        z=z_pos,
+        line=dict( color='darkblue', width=15 ),
+        hoverinfo="text",
+        hovertext=[ f"joint {idx}: {q}" 
+            for idx,q in 
+              enumerate(np.round(np.rad2deg([ 0, q1, q2, q3]),0)) ],
+        marker=dict(
+            size=10,
+            color=[ np.linalg.norm([x,y,z]) for x,y,z in zip(x_pos, y_pos, z_pos) ],
+            colorscale='Viridis',
+        )
+    )
+    fig.layout=dict(
+        width=1000,
+        height=700,
+        scene = dict( 
+            camera=dict( eye={ 'x':-1.25, 'y':-1.25, 'z':2 } ),
+            aspectratio={ 'x':1.25, 'y':1.25, 'z':1 },
+            xaxis = dict( nticks=8, ),
+            yaxis = dict( nticks=8 ),
+            zaxis = dict( nticks=8 ),
+            xaxis_title='Robot x-axis',
+            yaxis_title='Robot y-axis',
+            zaxis_title='Robot z-axis'),
+        title=f"Robot in joint Configuration: {np.round(np.rad2deg(q_parms),0)} degrees",
+        colorscale=dict(diverging="thermal")
+    )
+    pio.show(fig)
 
 def plot_robot(q_parms):
 
@@ -197,8 +251,8 @@ def plot_robot(q_parms):
     pio.show(fig)
 
 def get_cnfs(method_fun, q0=np.deg2rad([0, 0, 0]), kwargs=dict()):
-  x = np.array([1.1464])
-  y = np.array([0.1999999])
+  x = np.array([0.8272])
+  y = np.array([0.5963])
   z = np.array([0])
   rob_cnfs = []
 
@@ -217,14 +271,14 @@ def get_cnfs(method_fun, q0=np.deg2rad([0, 0, 0]), kwargs=dict()):
 
 if __name__ == "__main__":
     # Length of Links in meters
-    a1, a2, a3, a4 = 0.4, 0.4, 0.4, 0.4
+    a1, a2, a3, a4 = 0.36, 0.42, 0.4, 0.126
 
     pi = np.pi
     pi_sym = sym.pi
 
     # P = np.sin(np.linspace(-2.5,2.5))
+    #jacobian_sym_func = jacobian_sym()
+    #plot_robot(np.deg2rad([0,15,36]))
     jacobian_sym_func = jacobian_sym()
-    # plot_robot(np.deg2rad([0, 0, 30]))
-    # TE = FK(np.deg2rad([45, 45, 45]))
-    get_cnfs(method_fun=simple_pseudo, q0=np.deg2rad([0.5,0.5,0.5]))
+    get_cnfs(method_fun=simple_pseudo, q0=np.deg2rad([0,30,0]))
     # get_cnfs_priority(method_fun=null_space_method, q0=np.deg2rad([0,30,0,-20,0,45]))

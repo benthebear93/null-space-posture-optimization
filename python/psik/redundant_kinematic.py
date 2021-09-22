@@ -119,7 +119,7 @@ def simple_pseudo(q0, p_goal, time_step=0.01, max_iteration=3000, accuracy=0.001
   # Setting initial variables
   q_n0 = q0
   p = FK(q_n0)[:3,-1]
-
+  print("         :", p_goal, p)
   t_dot = p_goal - p # error x,y,z 
   e = np.linalg.norm(t_dot) #norm error
 
@@ -413,7 +413,58 @@ def wpi_priority(q0, p_goal, weights=[1,3,1,2,9,4,5], time_step=0.01, max_iterat
   print(f"to {np.round(q_n0,1)} :: {np.round(end_time - start_time, 4)} seconds\n")
 
   return np.mod(q_n1, 2*np.pi)
-  
+
+def damped_least_squares(q0, p_goal, lmbda = sqrt(0.01), time_step=0.01, max_iteration=3000, accuracy=0.001):
+
+  assert np.linalg.norm(p_goal[:3]) <= 0.85*np.sum([a1, a2, a3, a4]), "Robot Length constraint violated"
+
+  q_n0 = q0
+  p = FK(q_n0)[:3,-1]
+  t_dot = p_goal[:3] - p
+  e = np.linalg.norm(t_dot)
+
+  Tt = np.block([ np.eye(3), np.zeros((3,3)) ])
+  q_n1 = q_n0
+  δt = time_step
+  i=0
+
+  start_time = time.time()
+  while True:
+    if (e < accuracy): 
+      break
+    
+    fk = FK(q_n0)
+
+    rx, ry, rz = euler_angles(fk[:3,:3])
+
+    p = np.hstack([fk[:3,-1], [rx, ry, rz] ]) # current position and orientation
+
+    t_dot = p_goal[:3] - p[:3]
+
+    e = np.linalg.norm(t_dot)
+
+    Jt = np.dot(Tt, jacobian(q_n0))
+
+    j_star = (Jt @ Jt.T)  + (lmbda**2 * np.eye(3))
+
+    J_dls = Jt.T @ np.linalg.inv( j_star )
+
+    q_dot = np.linalg.multi_dot([J_dls, t_dot])
+
+    q_n1 = q_n0 + (δt * q_dot)  
+
+    q_n0 = q_n1
+
+    i+=1
+    if (i > max_iteration):
+      print("No convergence")
+      break
+    
+  end_time = time.time()
+  print(f"to {np.round(p_goal,2)} :: time taken {np.round(end_time - start_time, 4)} seconds\n")
+
+  return np.mod(q_n1, 2*np.pi)  
+
 def plot_robot(q_parms):
 
     q1, q2, q3, q4, q5, q6, q7 = q_parms
@@ -473,6 +524,7 @@ def plot_robot(q_parms):
     pio.show(fig)
   
   # plot_robot(np.deg2rad([0,90,45,-90,0,90,0]))
+
 def plot_robots(rob_cnfs, traj_x, traj_y, traj_z, traj_fun=(lambda x, y: 0.5 + 0.5*np.sin(3*x*y))):
   """
   rob_cnfs: list of robot configurations and plots each conf
@@ -575,5 +627,5 @@ if __name__ == "__main__":
     P = np.sin(np.linspace(-2.5,2.5))
     jacobian_sym_func = jacobian_sym()
     #plot_robot(np.deg2rad([0,0,0,0,0,0,0]))
-    #get_cnfs(method_fun=null_space_method, q0=np.deg2rad([0,30,0,-20,0,45,0]))
-    get_cnfs_priority(method_fun=null_space_method, q0=np.deg2rad([0,30,0,-20,0,45]))
+    get_cnfs(method_fun=simple_pseudo, q0=np.deg2rad([0,30,0,-20,0,45]))
+    #get_cnfs_priority(method_fun=simple_pseudo, q0=np.deg2rad([0,30,0,-20,0,45]))
