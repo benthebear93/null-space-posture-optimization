@@ -11,13 +11,15 @@ class Tx90(PyBulletRobot):
 	JOINT_FORCES = [87, 87, 87, 87, 87, 87]
 	def __init__(self, sim, base_position = [0, 0, 0]):
 		module_path = Path(tx90_gym.__file__)
+		self.URDFPath = "%s/urdf/tx90.urdf"%(module_path.parent.parent.absolute())
+		
 		n_action = 3
 		self.action_space = spaces.Box(-1.0, 1.0, shape=(n_action,))
-		self.eefID = 7
+		self.eefID = 8
 		super().__init__(
 			sim,
 			body_name="tx90",
-			file_name="/home/benlee/Desktop/git/null-space-posture-optimization/urdf/tx90.urdf",
+			file_name=self.URDFPath,
 			base_position=base_position,
 		)
 		print("=========================================")
@@ -38,8 +40,8 @@ class Tx90(PyBulletRobot):
 
 		 # Clip the height target. For some reason, it has a great impact on learning
 		target_ee_position[2] = max(0, target_ee_position[2]) 
-		self.euler2quat(0, 90, 0)
-		target_angles = self._inverse_kinematics(position=target_ee_position, orientation=self.euler2quat(0, 90, 0))#[1, 0, 0, 0])#target_ee_ori
+		self.euler2quat(0, -90, 0)
+		target_angles = self._inverse_kinematics(position=target_ee_position, orientation=[0, 0, 0, 1])#self.euler2quat(0, 90, 0))#[1, 0, 0, 0])#target_ee_ori
 		self.control_joints(target_angles=target_angles)
 
 	def get_obs(self):

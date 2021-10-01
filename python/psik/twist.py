@@ -2,8 +2,30 @@
 import time
 import numpy as np
 import sympy as sym
+from math import *
 sym.init_printing()
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
+
+def rotation_from_euler(euler):
+  R = Rz(euler[2]) @ Ry(euler[1]) @ Rx(euler[0])
+  return R
+
+def euler_from_rotation(R, sndSol=True):
+    '''
+    Rotation to euler angle
+    Input  : Rotation matrix
+    Output : Rx, Ry, Rz
+    '''
+
+    #rx = atan2(R[2,0], R[2,1])
+    rx = atan2(R[2,1], R[2,2])
+    ry = atan2(-R[2,0], sqrt(R[2,1]*R[2,1]+R[2,2]*R[2,2]))
+    #ry = atan2(sqrt(R[0,2]**2 + R[1,2]**2), R[2,2])
+    #rz = atan2(R[0,2], -R[1,2])
+    rz = atan2(R[1,0], R[0,0])
+    # r = np.rad2deg([rx,ry,rz])
+    # print(r)
+    return [rx, ry, rz]
 
 def Rx(q):
   T = np.array([[1,         0,          0, 0],
@@ -184,3 +206,31 @@ def d_Tz_sym():
         [0, 0, 0, 1],
         [0, 0, 0, 0]]
   )
+
+def Homgm(dh_param, q, offset=0):
+  d = dh_param[0]
+  a = dh_param[1]
+  alpha = dh_param[2]
+  q = q + offset
+
+  T = np.array([[np.cos(q), -np.cos(alpha)*np.sin(q), np.sin(alpha)*np.sin(q), a*np.cos(q)],
+                [np.sin(q), np.cos(alpha)*np.cos(q),  -np.sin(alpha)*np.cos(q), a*np.sin(q)],
+                [0, np.sin(alpha), np.cos(alpha), d],
+                [0,0,0,1]], dtype=float)
+
+  return T
+
+def Homgm_sym(dh_param, q, offset=0):
+  d = dh_param[0]
+  a = dh_param[1]
+  alpha = dh_param[2]
+
+  q = q + offset
+
+  T = sym.Matrix([[sym.cos(q), -sym.cos(alpha)*sym.sin(q), sym.sin(alpha)*sym.sin(q), a*sym.cos(q)],
+                [sym.sin(q), sym.cos(alpha)*sym.cos(q),  -sym.sin(alpha)*sym.cos(q), a*sym.sin(q)],
+                [0, sym.sin(alpha), sym.cos(alpha), d],
+                [0,0,0,1]])
+
+  return T
+

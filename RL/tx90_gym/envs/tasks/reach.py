@@ -11,7 +11,7 @@ class Reach(Task):
 		get_ee_position,
 		reward_type="sparse",
 		distance_threshold=0.05,
-		goal_range=0.3,
+		goal_range=1.0,
 	):
 		self.sim = sim
 		self.reward_type = reward_type
@@ -23,15 +23,15 @@ class Reach(Task):
 			self._create_scene()
 			self.sim.place_visualizer(target=[0, 0, 0], distance=1.5, yaw=45, pitch=-30)
 	def _create_scene(self):	
-		self.sim.create_plane(z_offset=0)
-		self.sim.create_table(length=0.5, width=0.5, height=0.5)
+		self.sim.create_plane(z_offset=-0.5)
+		self.sim.create_table(length=1.5, width=1.5, height=0.5)
 		self.sim.create_sphere(
 			body_name="target",
 			radius=0.02,
 			mass=0.0,
 			ghost=False,
 			position=[0.0, 0.0, 0.0],
-			rgba_color=[0.9, 0.1, 0.1, 0.3],
+			rgba_color=[0.9, 0.1, 0.1, 1.0],
 		)
 	def get_goal(self):
 		return self.goal.copy()

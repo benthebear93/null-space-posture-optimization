@@ -11,7 +11,10 @@ import plotly.express as px
 import plotly.io as pio
 import plotly.graph_objects as go
 
-# euler angle from rotation matrix
+def euler_to_rotation(euler):
+  R = Rz(euler[2]) @ Ry(euler[1]) @ Rx(euler[0])
+  return R
+  
 def euler_angles(R, sndSol=True):
   rx = atan2(R[2,0], R[2,1])
   ry = atan2(sqrt(R[0,2]**2 + R[1,2]**2), R[2,2])
@@ -24,23 +27,45 @@ def FK(joint_params):
   Joint variables consisting of 7 parameters
   """
   joint_params = np.asarray(joint_params, dtype=float)
-  q1, q2, q3 = joint_params
-  TF = np.linalg.multi_dot([ 
-          Rz(q1),Tx(a1),                   # Joint 1 to 2
-          Rz(q2),Tx(a2),                  # Joint 2 to 3 
-          Rz(q3),Tx(a3)                    # Joint 3 to E 
-  ])
+  q1, q2, q3, q4, q5, q6 = joint_params
+  dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
+  dh_param2 = np.array([0, 0.425, 0])
+  dh_param3 = np.array([0.05, 0, pi/2])
+  dh_param4 = np.array([0.425, 0, -pi/2])
+  dh_param5 = np.array([0, 0, pi/2])
+  dh_param6 = np.array([0.1, 0, 0])
+
+  T12 = Homgm(dh_param1, q1, offset=0)
+  T23 = Homgm(dh_param2, q2, offset=-pi/2)
+  T34 = Homgm(dh_param3, q3, offset=pi/2)
+  T45 = Homgm(dh_param4, q4, offset=0)
+  T56 = Homgm(dh_param5, q5, offset=0)
+  T6E = Homgm(dh_param6, q6, offset=0)
+  TF = T12@T23@T34@T45@T56@T6E
+
 
   return TF
 
 def jacobian_sym():
-  q1, q2, q3 = sym.symbols("q_1 q_2 q_3", real=True)  
+  q1, q2, q3, q4, q5, q6 = sym.symbols("q_1 q_2 q_3", real=True)  
 
-  variables = [q1, q2, q3]
+  variables = [q1, q2, q3, q4, q5, q6]
 
-  TF =  Rz_sym(q1) @ Tx_sym(a1) @ \
-        Rz_sym(q2) @ Tx_sym(a2) @ \
-        Rz_sym(q3) @ Tx_sym(a3) 
+  dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
+  dh_param2 = np.array([0, 0.425, 0])
+  dh_param3 = np.array([0.05, 0, pi/2])
+  dh_param4 = np.array([0.425, 0, -pi/2])
+  dh_param5 = np.array([0, 0, pi/2])
+  dh_param6 = np.array([0.1, 0, 0])
+
+  T12 = Homgm_sym(dh_param1, q1, offset=0)
+  T23 = Homgm_sym(dh_param2, q2, offset=-pi/2)
+  T34 = Homgm_sym(dh_param3, q3, offset=pi/2)
+  T45 = Homgm_sym(dh_param4, q4, offset=0)
+  T56 = Homgm_sym(dh_param5, q5, offset=0)
+  T6E = Homgm_sym(dh_param6, q6, offset=0)
+  TF = T12@T23@T34@T45@T56@T6E
+
 
   R = TF[:3,:-1]
   jacobian = sym.Matrix([])
@@ -48,14 +73,14 @@ def jacobian_sym():
   for var in variables:
       T_d  = sym.diff(TF, var) 
 
-      T    = T_d[0:2, -1] # translation?
-      #R_d  = T_d[0:3, :-1] #Rotation diff
-      #R_j  = R_d @ R.T  #Rotation jacobian
+      T    = T_d[0:3, -1] # translation?
+      R_d  = T_d[0:3, :-1] #Rotation diff
+      R_j  = R_d @ R.T  #Rotation jacobian
       # print("var : ", var)
       # print("R_j", R_j)
 
-      #J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # [T_d; R_d]
-      jacobian = jacobian.col_insert(len(jacobian), T) # 6x1 translation + rotation diff 
+      J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # [T_d; R_d]
+      jacobian = jacobian.col_insert(len(jacobian), J) # 6x1 translation + rotation diff 
 
   return sym.lambdify([variables], jacobian, "numpy") # Convert a SymPy expression into a function that allows for fast numeric evaluation.
 
@@ -185,12 +210,12 @@ def null_space_method(q0, p_goal, weights=[1,3,1], time_step=0.01, max_iteration
 def plot_robot(q_parms):
 
     #print("q_parm : ",q_parms[0])
-    q1, q2, q3 = q_parms[0]
+    q1, q2, q3 = q_parms #[0]
   
     T01 = np.eye(4)
-    T12 = Rz(q1) @ Tx(a1)          # Joint 1 to 2
-    T23 = Rz(q2) @ Tx(a2)                   # Joint 2 to 3
-    T3E = Rz(q3) @ Tx(a3)         # Joint 3 to E
+    T12 = Rz(q1)@Tz(a1)@Tx(a2)                   # Joint 1 to 2
+    T23 = Ry(q2)@Ty(a3)@Tz(a4)                   # Joint 2 to 3
+    T3E = Ry(q3)@Tz(a5)                         # Joint 3 to 4
 
     T02 = T01 @ T12
     T03 = T01 @ T12 @ T23
@@ -261,10 +286,14 @@ def plot_robots(rob_cnfs, traj_x, traj_y, traj_z, traj_fun=(lambda x, y: 0.5 + 0
     print("=========================")
     q1, q2, q3 = q_parms
   
-    T01 = np.eye(4)
-    T12 = Rz(q1) @ Tx(a1)          # Joint 1 to 2
-    T23 = Rz(q2) @ Tx(a2)                   # Joint 2 to 3
-    T3E = Rz(q3) @ Tx(a3)         # Joint 3 to E
+    # T01 = np.eye(4)
+    # T12 = Rz(q1) @ Tx(a1)          # Joint 1 to 2
+    # T23 = Rz(q2) @ Tx(a2)                   # Joint 2 to 3
+    # T3E = Rz(q3) @ Tx(a3)         # Joint 3 to E
+
+    T01 = Rz(q1) @ Tx(a1)
+    T12 = Rz(q2) @ Tx(a2)
+    T23 = Rz(q3) @ Tx(a3) 
 
     T02 = T01 @ T12
     T03 = T01 @ T12 @ T23
@@ -361,16 +390,16 @@ def get_cnfs_null(method_fun, q0=np.deg2rad([0, 0, 0]), kwargs=dict()):
   plot_robot(rob_cnfs)
 if __name__ == "__main__":
     # Length of Links in meters
-    a1, a2, a3, a4 = 0.4, 0.4, 0.4, 0.4
+    a1, a2, a3, a4, a5 = 0.425, 0.05, 0.05, 0.425, 0.1
 
     pi = np.pi
     pi_sym = sym.pi
 
     # P = np.sin(np.linspace(-2.5,2.5))
-    jacobian_sym_func = jacobian_sym()
-    # plot_robot(np.deg2rad([45, 45, 45]))
+    #jacobian_sym_func = jacobian_sym()
+    plot_robot(np.deg2rad([45, 45, 45]))
     # TE = FK(np.deg2rad([45, 45, 45]))
-    get_cnfs_null(method_fun=null_space_method, q0=np.deg2rad([0.5,0.5,0.5]))
+    #get_cnfs_null(method_fun=null_space_method, q0=np.deg2rad([0.5,0.5,0.5]))
     # get_cnfs(method_fun=simple_pseudo, q0=np.deg2rad([0.5, 0.5, 0.5]))
     
     # get_cnfs_priority(method_fun=null_space_method, q0=np.deg2rad([0,30,0,-20,0,45]))

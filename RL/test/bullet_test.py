@@ -4,7 +4,7 @@ import pybullet_data
 import utils_tx90
 import math as m
 from time import sleep
-
+import tx90_gym;		from pathlib import Path
 
 def _inverse_kinematics(position, orientation):
     inverse_kinematics = sim.inverse_kinematics(
@@ -27,9 +27,9 @@ def fk(jointpos):
     print(eefID, ":", ee_pos)
     return ee_pos
 
-
-URDFPath="C:/Users/nswve/Desktop/git/null-space-posture-optimization/urdf/tx902.urdf"
-BallPath="C:/Users/nswve/Desktop/git/null-space-posture-optimization/urdf/ball.urdf"
+module_path = Path(tx90_gym.__file__)
+URDFPath = "%s/urdf/tx90.urdf"%(module_path.parent.parent.absolute())
+BallPath="%s/urdf/tx90.urdf"%(module_path.parent.parent.absolute())
 print("==========loading URDF==========")
 physicsClient = p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -39,7 +39,7 @@ robotStartPos = [0,0,0.0]
 robotStartOrn = p.getQuaternionFromEuler([0,0,0])
 
 robotID = p.loadURDF(URDFPath, robotStartPos, robotStartOrn, useFixedBase = True, flags=p.URDF_USE_INERTIA_FROM_FILE)
-eefID = 9
+eefID = 8
 
 joints, controlJoints = utils_tx90.setup_tx90(p, robotID) #get joints and controllable joints
 joint_init = [deg2rad(0), deg2rad(0), deg2rad(90), deg2rad(0), deg2rad(0), deg2rad(0)]

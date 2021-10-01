@@ -1,4 +1,3 @@
-README.md
 setup.py
 tx90_gym.egg-info/PKG-INFO
 tx90_gym.egg-info/SOURCES.txt

@@ -10,9 +10,9 @@ def deg2rad(degree):
 
 class Tx90():
     def __init__(self):
-        self.URDFPath = "C:/Users/UNIST/Desktop/git/null-space-posture-optimization/urdf/tx90.urdf"
-        self.BallPath = "C:/Users/UNIST/Desktop/git/null-space-posture-optimization/urdf/ball.urdf"
-        self.BallPath2 = "C:/Users/UNIST/Desktop/git/null-space-posture-optimization/urdf/ball2.urdf"
+        self.URDFPath = "C:/Users/UNIST/Desktop/git/null-space-posture-optimization/RL/urdf/tx90.urdf"
+        self.BallPath = "C:/Users/UNIST/Desktop/git/null-space-posture-optimization/RL/urdf/ball.urdf"
+        self.BallPath2 = "C:/Users/UNIST/Desktop/git/null-space-posture-optimization/RL/urdf/ball2.urdf"
         print(self.URDFPath)
         self.numofjoint = 6
         #Desktop\git\null-space-posture-optimization\urdf
@@ -46,6 +46,7 @@ class Tx90():
             p.resetJointState(self.robotID, self.joints[name].id, targetValue=jointpos[i],targetVelocity=0)
         p.stepSimulation()
         ee_state = p.getLinkState(self.robotID, self.eefID)
+        #print("ee_state", ee_state)
         ee_pos = np.array(ee_state[0])
         return ee_pos
 
@@ -83,6 +84,9 @@ class Tx90():
 
     def getQuaternionFromEuler(self, euler_ang):
         return p.getQuaternionFromEuler(euler_ang)
+
+    def getMatrixFromQuaternion(self, quat):
+        return p.getMatrixFromQuaternion(quat)
     
     def ballupdate(self, pos, ori):
         ballStartPos = pos
@@ -95,6 +99,29 @@ class Tx90():
         balltStartOrn = p.getQuaternionFromEuler([0,0,0])
 
         ballId = p.loadURDF(self.BallPath2, ballStartPos, balltStartOrn, useFixedBase = True, flags=p.URDF_USE_INERTIA_FROM_FILE)
+
+    def getMotorJointStates(self, robot):
+        joint_states = p.getJointStates(self.robotID, range(p.getNumJoints(self.robotID)))
+        joint_infos = [p.getJointInfo(self.robotID, i) for i in range(p.getNumJoints(self.robotID))]
+        joint_states = [j for j, i in zip(joint_states, joint_infos) if i[3] > -1]
+        joint_positions = [state[0] for state in joint_states]
+        joint_velocities = [state[1] for state in joint_states]
+        joint_torques = [state[3] for state in joint_states]
+        return joint_positions, joint_velocities, joint_torques
+
+    def getjacobian(self):
+        mpos, mvel, mtorq = self.getMotorJointStates(self.robotID)
+        result = p.getLinkState(self.robotID, self.eefID,computeLinkVelocity=1,computeForwardKinematics=1)
+        link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+
+        zero_vec = [0.0] * len(mpos)
+        jac_t, jac_r = p.calculateJacobian(self.robotID, self.eefID, com_trn, mpos, zero_vec, zero_vec)
+        jac_t = np.array(jac_t)
+        jac_r = np.array(jac_r)
+        # print(jac_t, type(jac_t))
+        # print("---------------------------")
+        # print(jac_r, type(jac_r))
+        return jac_t, jac_r
 
 def Rx(theta):
   return np.array([[ 1, 0           , 0           ],
@@ -111,7 +138,23 @@ def Rz(theta):
                    [ m.sin(theta), m.cos(theta) , 0 ],
                    [ 0           , 0            , 1 ]])
 
+# euler angle from rotation matrix
+def euler_angles(R, sndSol=True):
+  rx = m.atan2(R[2,0], R[2,1])
+  ry = m.atan2(m.sqrt(R[0,2]**2 + R[1,2]**2), R[2,2])
+  rz = m.atan2(R[0,2], -R[1,2])
 
+  return [rx, ry, rz]
+
+def rpy_rotation(R):
+    roll  = m.atan2(R[2][1], R[2][2])
+    pitch = m.atan2(-R[2][0], m.sqrt(R[2][1]*R[2][1]+R[2][2]*R[2][2]))
+    yaw   = m.atan2(R[1][0], R[0][0])
+    print("===== rpy =====")
+    print(" ")
+    print(roll, pitch, yaw)
+    print(" ")
+    print(np.rad2deg(roll),np.rad2deg(pitch),np.rad2deg(yaw) )
 
 if __name__=="__main__":
     tx90 = Tx90()
@@ -122,18 +165,46 @@ if __name__=="__main__":
     # tx90.fk([0.0, 0.0, deg2rad(90), 0, 0, 0])
     
     pos, ori = tx90.get_ee()
-    pos2, ori2 = tx90.get_ee2()
-    print("pos: ", pos, "ori: ", ori)
-    print("euler :", tx90.getEulerFromQuaternion(ori))
+    print("before pos :", pos)
+    pos2, ori2 = tx90.get_ee2() # flage
+    # print("pos: ", pos)
+    # print (" ")
+    # print("ori: ", ori)
+    print("euler :", np.rad2deg(tx90.getEulerFromQuaternion(ori)))
+    # print(" ")
+
+    print("rotation: ", tx90.getMatrixFromQuaternion(ori))
+    euler  = tx90.getEulerFromQuaternion(ori)
+    R_matrix = Rz(euler[2])@Ry(euler[1])@Rx(euler[0])
+    # print("R from euler:", R_matrix)
+
+    rpy_rotation(R_matrix)
+    # Rxyz = euler_angles(R_matrix)
+    # print("Rxyz :", np.rad2deg(Rxyz[0]), np.rad2deg(Rxyz[1]), np.rad2deg(Rxyz[2]) )
+    # print("R from euler:", Rz(Rxyz[2])@Ry(Rxyz[1])@Rx(Rxyz[0]) )
     tx90.ballupdate(pos,ori)
     tx90.ballupdate2(pos2,ori2)
     # R = np.dot(deg2rad(177.302), np.dot(Ry(deg2rad(88.824)), Rx(deg2rad(177.272))))
-    for i in range(10):
-        euler = tx90.getEulerFromQuaternion(ori)
-        euler[2] = euler[2] - deg2rad(1)
-        ori = tx90.getQuaternionFromEuler(euler)
-        j_pos = tx90.inverse_kinematics(pos, ori)
-        tx90.fk(j_pos)
-        print("after pos: ", pos, "after ori: ", ori)
-        time.sleep(0.5)
+    #for i in range(10):
+    euler = tx90.getEulerFromQuaternion(ori)
+    # print("ori: ", ori)
+    # print("euler : " , np.rad2deg(euler))
+    # print("Rotation matrix: ")
+    # print(Rz(euler[2])@Ry(euler[1])@Rx(euler[0]))
+    euler[2] = euler[2] + 0.5
+    ori = tx90.getQuaternionFromEuler(euler)
+    print(" ")
+    print(np.rad2deg(euler))
+    j_pos = tx90.inverse_kinematics(pos, ori)
+    print("pos :", pos)
+    tx90.fk(j_pos)
+    pos, ori = tx90.get_ee()
+    print("after pos :", pos)
+    pos2, ori2 = tx90.get_ee2()
+    #print(i, ": after pos: ", pos, "after ori: ",  np.rad2deg(ori))
+    # print("   ")
+    tx90.getjacobian()
+    tx90.ballupdate(pos,ori)
+    tx90.ballupdate2(pos2,ori2)
+        #time.sleep(0.5)
     time.sleep(11000)
