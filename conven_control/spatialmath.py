@@ -6,6 +6,18 @@ from math import *
 sym.init_printing()
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
 
+def find_T(R):
+    rpy = euler_from_rotation(R)
+    r = rpy[0]
+    b = rpy[1]
+    yaw = rpy[2]
+    T = np.array([ 
+        [1, 0, sin(b)], 
+        [0, cos(r), -cos(b)*sin(r)], 
+        [0, sin(r), cos(b)*cos(r)]
+    ])
+    return T
+
 def rotation_from_euler(euler):
   R = Rz(euler[2]) @ Ry(euler[1]) @ Rx(euler[0])
   return R

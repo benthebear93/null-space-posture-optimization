@@ -1,17 +1,75 @@
 import time
 import numpy as np
 import sympy as sym
+import pandas as pd
 sym.init_printing()
 # from math import atan2, sqrt
 import matplotlib.pyplot as plt
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
-from twist import *
+from spatialmath import *
 import dill
+import os
 
 import plotly.express as px
 import plotly.io as pio
 import plotly.graph_objects as go
 
+def posture_read():
+    # load_wb = load_workbook("C:/Users/UNIST/Desktop/stiffness_estimation/test_z.xlsx", data_only=True)
+    df = pd.read_excel('random_position.xlsx', header=None, names=None, index_col=None)
+    num_test = df.shape[0]
+
+    print("number of test: ",  (num_test-1)/2)
+    overall_posval =[]
+    pos_val = []
+    for i in range(0, num_test):
+        for j in range(0, 6):
+            a = df.iloc[i][j]
+            pos_val.append(a)
+        overall_posval.append(pos_val)
+        pos_val = []
+    print(overall_posval)
+    return overall_posval
+
+root = os.getcwd()
+
+def is_success(error):
+    accuracy = 0.001
+    if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < 0.01 and abs(error[4]) < 0.01: 
+        return True
+
+def Joint_limit_check(q):
+    if q[0] > 3.14159:
+        q[0] = -3.14159 + q[0]
+    elif q[0] <-3.14159:
+        q[0] = -q[0]
+
+    if q[1]-1.5708 > 2.5744:
+        q[1] = -2.57445 + q[1]
+    elif q[1]-1.5708 <-2.2689:
+        q[1] = -q[1]
+
+    if q[2] > 2.5307:
+        q[2] = -2.5307 + q[2]
+    elif q[2] < -2.5307:
+        q[2] = -q[2]
+
+    if q[3] > 4.7124:
+        q[3] = -4.7124 + q[3]
+    elif q[3] <-4.7124:
+        q[3] = -q[3]
+
+    if q[4] > 2.4435:
+        q[4] = -2.4435 + q[4]
+    elif q[4] <-2.0071:
+        q[4] = -q[4]
+
+    if q[5] > 4.7124:
+        q[5] = -4.7124 + q[5]
+    elif q[5] < -4.7124:
+        q[5] = -q[5]
+
+    return q
 
 def FK(joint_params):
     """
@@ -63,33 +121,19 @@ def jacobian_sym():
     T56 = Homgm_sym(dh_param5, q5, offset=0)
     T67 = Homgm_sym(dh_param6, q6, offset=0)
     T7E = Homgm_sym(dh_param7, q7, offset=0)
-    # T7E = np.array([[1, 0, 0, 0.1911],
-    #         [0, 1,  0, 0],
-    #         [0, 0, 1, 0.1027],
-    #         [0,0,0,1]])
-    TF = T12@T23@T34@T45@T56@T67#@T7E
+    TF = T12@T23@T34@T45@T56@T67
 
     TF_Extend = T12@T23@T34@T45@T56@T67@T7E
     # # additional link
-    # T06 = T12@T23@T34@T45@T56
-    # Z6 = T06[:3,:1]
 
-    # print("Z6", Z6)
     R = TF_Extend[:3,:-1]
     jacobian = sym.Matrix([])
-    # r = sym.atan2(R[2,1], R[2,2])
-    # p = sym.atan2(-R[2,0], sym.sqrt(R[2,1]*R[2,1]+R[2,2]*R[2,2]))
-    # yaw = sym.atan2(R[1,0], R[0,0])
-    # T = sym.Matrix([ [1, 0, sym.sin(b)],
-    #                  [0, sym.cos(r), -sym.cos(p)*sym.sid(r)],
-    #                  [0, sym.sin(r) sym.cos(p)*sym.cos(r)] ])
-    # T = T.inv()
-        # additional link
+
     T_d = sym.diff(TF_Extend, var2)
     T    = T_d[0:3, -1]
     R_d  = T_d[0:3, :-1]
     R_j  = R_d @ R.T 
-    J_Extend = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]]))
+    J_Extend = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # additional link
 
     for var in variables[:6]:
         T_d  = sym.diff(TF, var) 
@@ -101,11 +145,10 @@ def jacobian_sym():
         J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]]))
 
         jacobian = jacobian.col_insert(len(jacobian), J)
-    jacobian = jacobian.col_insert(len(jacobian), J_Extend)
-    jacobian = sym.nsimplify(jacobian, tolerance=1e-5, rational=True)
+    jacobian = jacobian.col_insert(len(jacobian), J_Extend) # additional link jacobian
+    jacobian = sym.nsimplify(jacobian, tolerance=1e-5, rational=True) # remove near zero values
 
     return sym.lambdify([variables], jacobian, "numpy")
-
 
 def jacobian(joint_params):
     variables = [*joint_params]
@@ -123,15 +166,6 @@ def plot_robot(q_parms):
     q6 = q_parms[5]
     q7 = 0
 
-
-    # q1 = q_parms[0][0] 
-    # q2 = q_parms[0][1]
-    # q3 = q_parms[0][2]
-    # q4 = q_parms[0][3]
-    # q5 = q_parms[0][4]
-    # q6 = q_parms[0][5]
-
-    # DH parameter [ d a alpah ]
     dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
     dh_param2 = np.array([0, 0.425, 0])
     dh_param3 = np.array([0.05, 0, pi/2])
@@ -212,42 +246,37 @@ def simple_pseudo(q0, p_goal, time_step=1.2, max_iteration=500000, accuracy=0.00
     p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
 
     t_dot = p_goal - p
-    e = np.linalg.norm(t_dot)
-
-    Tt = np.block([ np.eye(6) ])
-    q_n1 = q_n0
     δt = time_step
     i=0
 
     start_time = time.time()
-
+    J_func    = dill.load(open(root+'\param_save\J_func_simp', "rb"))
+    print("start runnign")
+    q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
     while True:
         # print(" ")
         # print(i, "/ 5000 ")
         # print(" ")
-        q_n0[6] = 0
-        if (e < accuracy): 
+        if is_success(t_dot):
             print(f"Accuracy of {accuracy} reached")
             break
+        q_n0 = Joint_limit_check(q_n0)
+        q_n0 = q_n0 + (δt * q_dot)  
+        q_n0[6] = 0
         p = FK(q_n0)[:3,-1]
         R = FK(q_n0)[:3,:-1] # Rotation matrix
         p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
 
+        T = find_T(R)
+        invT = np.linalg.inv(T)
+        J = J_func(q_n0)
+        J_a = np.block([[np.eye(3), np.zeros((3,3))],[np.zeros((3, 3)), invT]]) @ J
+        J_inv = np.linalg.pinv(J_a) 
+
         t_dot = p_goal - p
-        e = np.linalg.norm(t_dot)
-        J = jacobian(q_n0)
-        J_inv = np.linalg.pinv( (Tt @ J) ) 
-        if i ==0:
-            print("FK:", FK(q_n0))
-            print("q ", q_n0)
-            print("p: ", p)
-            print("t_dot: ", t_dot)
-            print("Jacovian ", J)
-        q_dot = J_inv @ t_dot
-        q_n1 = q_n0 + (δt * q_dot)  
-
-        q_n0 = q_n1
-
+        q_dot = (J_inv @ t_dot)*0.1
+        if is_success(t_dot):
+            break
         i+=1
         if (i > max_iteration):
             print("No convergence")
@@ -256,24 +285,24 @@ def simple_pseudo(q0, p_goal, time_step=1.2, max_iteration=500000, accuracy=0.00
     end_time = time.time()
     print(f"Total time taken {np.round(end_time - start_time, 4)} seconds\n")
 
-    return np.mod(q_n1, 2*np.pi)
+    return q_n0, p
 
 def get_cnfs_null(method_fun, q0=np.deg2rad([0, 0, 0, 0, 0, 0, 0]), kwargs=dict()):
-    # x = np.array([1.1464])
-    # y = np.array([0.1999999])
-    # #z = np.array([0])
-    pos = np.array([0.674, 0.0431, -0.13358, 0.0028, 1.5708, 0])
-    start_time = time.time()
-    # for (i, j) in zip (x, y):# k, z
-    #   pos = [i, j] # k
+    # pos = np.array([0.674, 0.0431, -0.13358, 0.0028, 1.5708, 0])        #0.5sec
+    # pos = np.array([0.674, 0.39453, -0.13358, 0.0028, 1.5708, 0])       #0.37sec
+    # pos = np.array([0.674, -0.2752, 0.36959, 0.0028, 1.5708, 0])        #9.1sec
+    # pos = np.array([0.67773, 0.41947, -0.1084, 0.0028, 1.5708, 0])      #0.37sec
 
-    q = method_fun(q0, pos, **kwargs)
+    overallpos = posture_read()
+    # print(overallpos[8])
+    # q, p = method_fun(self.init_q, np.array(overallpos[8]), **kwargs)
+    for i in range(len(overallpos)):
+        q, p = method_fun(q0, np.array(overallpos[i]), **kwargs)
+        print("pos", i, " ans : ", np.rad2deg(q))
+        # print("arrived: ", p.T)
+        # print(" ")
 
     end_time = time.time()
-    print(f"\n{np.round(end_time-start_time, 1)} seconds : Total time using {method_fun.__name__} \n")
-    if kwargs: print(f"\nParameters used: {kwargs}")
-
-    plot_robot(q)
 
 if __name__ == "__main__":
     # Length of Links in meters
@@ -281,5 +310,5 @@ if __name__ == "__main__":
     pi_sym = sym.pi
     # q = np.deg2rad(np.array([-8.56, 40.89, 136.83, -8.56, -87.34, -0.11]))
     # plot_robot(q)
-    jacobian_sym_func = jacobian_sym()
+    # jacobian_sym_func = jacobian_sym()
     get_cnfs_null(method_fun=simple_pseudo, q0=np.deg2rad([10 ,10, 10, 10, 10, 10, 0]))
