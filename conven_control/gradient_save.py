@@ -1,35 +1,23 @@
+import os
 import time
 import numpy as np
 import sympy as sym
 sym.init_printing()
-from math import atan2, sqrt
-import matplotlib.pyplot as plt
-np.set_printoptions(precision=4, suppress=True, linewidth=200)
 from spatialmath import *
 import pickle
-import os
-
-import plotly.express as px
-import plotly.io as pio
-import plotly.graph_objects as go
 import dill
 
 Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49], dtype=np.float64)) # 3x3 
 root = os.getcwd()
 
 def external_force(): 
-    '''
-    External force 
-    Output : Fx, Fy 
-    shape  :(2x1)
-    '''
     F = np.array([[3.0], [3.0], [20.0], [0.0], [0.0], [0.0]])
     return F
 
 def FK(joint_params):
-    """
-    Joint variables consisting of 6 parameters
-    """
+    '''
+    6 dof Forward kinematic with additional last link(spindle)
+    '''
     joint_params = np.asarray(joint_params, dtype=float)
     q1, q2, q3, q4, q5, q6, q7 = joint_params
     dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
@@ -51,14 +39,6 @@ def FK(joint_params):
     TF = T12@T23@T34@T45@T56@T67@T7E
 
     return TF
-    
-def jacobian(joint_params):
-
-    variables = [*joint_params]
-    jacobian = jacobian_sym_func(variables)
-    hessian = diff_jacobian_sym_func(variables)
-
-    return jacobian, hessian
 
 def jacobian_sym():
     '''
@@ -97,9 +77,9 @@ def jacobian_sym():
     jacobian = sym.Matrix([])
     jacobian_ori = sym.Matrix([])
     jacobian_null = sym.Matrix([])
-    Hessian = sym.Matrix([])
+    target_f = sym.Matrix([])
 
-    T_d = sym.diff(TF_Extend, var2)
+    T_d = sym.diff(TF_Extend, var2) # additional link 
     T    = T_d[0:3, -1]
     R_d  = T_d[0:3, :-1]
     R_j  = R_d @ R.T 
@@ -114,7 +94,7 @@ def jacobian_sym():
         R_d  = T_d[0:3, :-1] # Rotation diff 
         R_j  = R_d @ R.T     # Rotation jacobian
 
-        J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # [T_d; R_d] # jacobian calcuation for hessian
+        J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # [T_d; R_d] # jacobian calcuation for target_f
         J_null = T.row_insert(2, sym.Matrix([R_j[2,1], R_j[0,2]])) # null space control jacobian 
         jacobian = jacobian.col_insert(len(jacobian), J) # 6x1 translation + rotation diff 
         jacobian_null = jacobian_null.col_insert(len(jacobian_null), J_null) # 6x1 translation + rotation diff 
@@ -126,51 +106,53 @@ def jacobian_sym():
     jacobian = sym.nsimplify(jacobian,tolerance=1e-5,rational=True)
     jacobian_null = sym.nsimplify(jacobian_null,tolerance=1e-5,rational=True)
 
-    print("jacobian:", jacobian)
     F = external_force()
     Ktheta_inv = np.linalg.inv(Ktheta)
     target_jacobian = jacobian_ori @ Ktheta_inv @ jacobian_ori.T @ F # 2x3 @ 3x3 @ 3x2 @ 2x1 = 2x1
     print("  ")
     print("shape :", target_jacobian.shape, type(target_jacobian))
     print("  ")
-    H =0.5*(target_jacobian.row(2)@target_jacobian.row(2))# + target_jacobian.row(1)@target_jacobian.row(1))
+
+    H =0.5*(target_jacobian.row(2)@target_jacobian.row(2))# target function for optimization 
 
     for var in variables:
-        print("calculating hessian")
+        print("calculating gradient")
         T_d = sym.diff(H, var)
-        Hessian = Hessian.col_insert(len(Hessian), T_d) # 3x1
+        target_f = target_f.col_insert(len(target_f), T_d) # 3x1
 
-    Hessian = sym.nsimplify(Hessian,tolerance=1e-5,rational=True)
+    target_f = sym.nsimplify(target_f,tolerance=1e-5,rational=True)
     print("  ")
-    print("shape :", jacobian.shape, jacobian_null.shape, Hessian.shape)
+    print("shape :", jacobian.shape, jacobian_null.shape, target_f.shape)
     print("  ")
     with open(root+'/param_save/Jacobian.txt','wb') as f:
         pickle.dump(jacobian,f)
     with open(root+'/param_save/Jacobian_null.txt','wb') as f:
         pickle.dump(jacobian_null,f)
-    with open(root+'/param_save/hessian.txt','wb') as f:
-        pickle.dump(Hessian,f)
-    return sym.lambdify([variables], jacobian_null, "numpy"), sym.lambdify([variables], Hessian, "numpy") # Convert a SymPy expression into a function that allows for fast numeric evaluation.
-
-def get_cnfs_null(method_fun, q0=np.deg2rad([0, 0, 0, 0, 0, 0]), kwargs=dict()):
-    # x = np.array([1.1464])
-    # y = np.array([0.1999999])
-    # #z = np.array([0])
-    rob_cnfs = []
-    pos = np.array([[0.523], [-0.244], [0.425], [-1.5708], [-1.0472], [1.5708]])
-    start_time = time.time()
-    # for (i, j) in zip (x, y):# k, z
-    #   pos = [i, j] # k
-
-    q = method_fun(q0, pos, **kwargs)
-    rob_cnfs.append(q)
-
-    end_time = time.time()
-    print(f"\n{np.round(end_time-start_time, 1)} seconds : Total time using {method_fun.__name__} \n")
-    if kwargs: print(f"\nParameters used: {kwargs}")
-
-    plot_robot(rob_cnfs)
+    with open(root+'/param_save/target_f.txt','wb') as f:
+        pickle.dump(target_f,f)
+    return sym.lambdify([variables], jacobian_null, "numpy"), sym.lambdify([variables], target_f, "numpy") # Convert a SymPy expression into a function that allows for fast numeric evaluation.
 
 if __name__ == "__main__":
     jacobian_sym_func = jacobian_sym()
-    get_cnfs_null(method_fun=null_space_method, q0=np.deg2rad([5 ,5, 5, 5, 5, 5]))
+
+    jacobian = sym.Matrix([])
+    jacobian_null = sym.Matrix([])
+    Hessian = sym.Matrix([])
+    
+    with open(root+'/param_save/Jacobian.txt','rb') as f:
+        jacobian = pickle.load(f)
+    with open(root+'/param_save/target_f.txt','rb') as f:
+        target_f = pickle.load(f)
+    with open(root+'/param_save/Jacobian_null.txt','rb') as f:
+        jacobian_null = pickle.load(f)
+
+    q1, q2, q3, q4, q5, q6, q7 = sym.symbols("q_1 q_2 q_3 q_4 q_5 q_6 q_7", real=True) 
+    variables = [q1, q2, q3, q4, q5, q6, q7]
+    J_func = sym.lambdify([variables], jacobian, modules='numpy')
+    Jn_func = sym.lambdify([variables], jacobian_null, modules='numpy')
+    H_func = sym.lambdify([variables], target_f, modules='numpy')
+
+    dill.settings['recurse'] = True
+    dill.dump(J_func, open(root+'\param_save\J_func_simp', "wb"))
+    dill.dump(Jn_func, open(root+'\param_save\Jn_func_simp', "wb"))
+    dill.dump(H_func, open(root+'\param_save\H_func_simp', "wb"))

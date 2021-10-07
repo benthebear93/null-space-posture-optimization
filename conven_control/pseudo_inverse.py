@@ -14,6 +14,8 @@ import plotly.express as px
 import plotly.io as pio
 import plotly.graph_objects as go
 
+root = os.getcwd()
+
 def posture_read():
     # load_wb = load_workbook("C:/Users/UNIST/Desktop/stiffness_estimation/test_z.xlsx", data_only=True)
     df = pd.read_excel('random_position.xlsx', header=None, names=None, index_col=None)
@@ -30,8 +32,6 @@ def posture_read():
         pos_val = []
     print(overall_posval)
     return overall_posval
-
-root = os.getcwd()
 
 def is_success(error):
     accuracy = 0.001
@@ -97,142 +97,6 @@ def FK(joint_params):
 
     return TF
 
-
-def jacobian_sym():
-    '''
-    Symbolic jacobian calculation
-    '''
-    q1, q2, q3, q4, q5, q6, q7= sym.symbols("q_1 q_2 q_3 q_4 q_5 q_6 q_7", real=True)  
-
-    variables = [q1, q2, q3, q4, q5, q6, q7]
-    var2 = q7
-    dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
-    dh_param2 = np.array([0, 0.425, 0])
-    dh_param3 = np.array([0.05, 0, pi/2])
-    dh_param4 = np.array([0.425, 0, -pi/2])
-    dh_param5 = np.array([0, 0, pi/2])
-    dh_param6 = np.array([0.1, 0, 0])
-    dh_param7 = np.array([0.1027, 0.1911, 0])
-
-    T12 = Homgm_sym(dh_param1, q1, offset=0)
-    T23 = Homgm_sym(dh_param2, q2, offset=-pi/2)
-    T34 = Homgm_sym(dh_param3, q3, offset=pi/2)
-    T45 = Homgm_sym(dh_param4, q4, offset=0)
-    T56 = Homgm_sym(dh_param5, q5, offset=0)
-    T67 = Homgm_sym(dh_param6, q6, offset=0)
-    T7E = Homgm_sym(dh_param7, q7, offset=0)
-    TF = T12@T23@T34@T45@T56@T67
-
-    TF_Extend = T12@T23@T34@T45@T56@T67@T7E
-    # # additional link
-
-    R = TF_Extend[:3,:-1]
-    jacobian = sym.Matrix([])
-
-    T_d = sym.diff(TF_Extend, var2)
-    T    = T_d[0:3, -1]
-    R_d  = T_d[0:3, :-1]
-    R_j  = R_d @ R.T 
-    J_Extend = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # additional link
-
-    for var in variables[:6]:
-        T_d  = sym.diff(TF, var) 
-
-        T    = T_d[0:3, -1]
-        R_d  = T_d[0:3, :-1]
-        R_j  = R_d @ R.T 
-
-        J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]]))
-
-        jacobian = jacobian.col_insert(len(jacobian), J)
-    jacobian = jacobian.col_insert(len(jacobian), J_Extend) # additional link jacobian
-    jacobian = sym.nsimplify(jacobian, tolerance=1e-5, rational=True) # remove near zero values
-
-    return sym.lambdify([variables], jacobian, "numpy")
-
-def jacobian(joint_params):
-    variables = [*joint_params]
-    return jacobian_sym_func(variables)
-
-def plot_robot(q_parms):
-    print(q_parms, q_parms.shape)
-    print(np.rad2deg(q_parms))
-
-    q1 = q_parms[0] 
-    q2 = q_parms[1]
-    q3 = q_parms[2]
-    q4 = q_parms[3]
-    q5 = q_parms[4]
-    q6 = q_parms[5]
-    q7 = 0
-
-    dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
-    dh_param2 = np.array([0, 0.425, 0])
-    dh_param3 = np.array([0.05, 0, pi/2])
-    dh_param4 = np.array([0.425, 0, -pi/2])
-    dh_param5 = np.array([0, 0, pi/2])
-    dh_param6 = np.array([0.1, 0, 0])
-    dh_param7 = np.array([0.1027, 0.1911, 0])
-
-    T12 = Homgm(dh_param1, q1, offset=0)
-    T23 = Homgm(dh_param2, q2, offset=-pi/2)
-    T34 = Homgm(dh_param3, q3, offset=pi/2)
-    T45 = Homgm(dh_param4, q4, offset=0)
-    T56 = Homgm(dh_param5, q5, offset=0)
-    T67 = Homgm(dh_param6, q6, offset=0)
-    T7E = Homgm(dh_param7, q7, offset=0)
-
-    TF = T12@T23@T34@T45@T56@T67@T7E
-
-    T01 = np.eye(4)
-    T02 = T01 @ T12
-    T03 = T01 @ T12 @ T23
-    T04 = T01 @ T12 @ T23 @ T34
-    T05 = T01 @ T12 @ T23 @ T34 @ T45
-    T06 = T01 @ T12 @ T23 @ T34 @ T45 @ T56
-    T07 = T01 @ T12 @ T23 @ T34 @ T45 @ T56 @ T67
-    T0E = T01 @ T12 @ T23 @ T34 @ T45 @ T56 @ T67 @ T7E
-    p = T0E[:3,-1] # position 
-    R = T0E[:3, :-1]
-    rpy = euler_from_rotation(R)
-    print("end pos : ", p[0], p[1], p[2], rpy)
-    x_pos = [T01[0,-1], T02[0,-1], T03[0,-1], T04[0,-1], T05[0,-1], T06[0,-1], T07[0,-1], T0E[0,-1]]
-    y_pos = [T01[1,-1], T02[1,-1], T03[1,-1], T04[1,-1], T05[1,-1], T06[1,-1], T07[1,-1], T0E[0,-1]]
-    z_pos = [T01[2,-1], T02[2,-1], T03[2,-1], T04[2,-1], T05[2,-1], T06[2,-1], T07[2,-1], T0E[0,-1]]
- 
-    fig = go.Figure()
-    fig.add_scatter3d(
-        x=np.round(x_pos,2),
-        y=np.round(y_pos,2),
-        z=z_pos,
-        line=dict( color='darkblue', width=15 ),
-        hoverinfo="text",
-        hovertext=[ f"joint {idx}: {q}" 
-            for idx,q in 
-              enumerate(np.round(np.rad2deg([ 0, q1, q2, q3, q4, q5, q6 ]),0)) ],
-        marker=dict(
-            size=10,
-            color=[ np.linalg.norm([x,y,z]) for x,y,z in zip(x_pos, y_pos, z_pos) ],
-            colorscale='Viridis',
-        )
-    )
-    fig.layout=dict(
-        width=1000,
-        height=700,
-        scene = dict( 
-            camera=dict( eye={ 'x':-1.25, 'y':-1.25, 'z':2 } ),
-            aspectratio={ 'x':1.25, 'y':1.25, 'z':1 },
-            xaxis = dict( nticks=8, ),
-            yaxis = dict( nticks=8 ),
-            zaxis = dict( nticks=8 ),
-            xaxis_title='Robot x-axis',
-            yaxis_title='Robot y-axis',
-            zaxis_title='Robot z-axis'),
-        title=f"Robot in joint Configuration: {np.round(np.rad2deg(q_parms),0)} degrees",
-        colorscale=dict(diverging="thermal")
-    )
-    pio.show(fig)
-
 def simple_pseudo(q0, p_goal, time_step=1.2, max_iteration=500000, accuracy=0.001):
 
     goal_R = rotation_from_euler(p_goal[3:6])
@@ -288,27 +152,25 @@ def simple_pseudo(q0, p_goal, time_step=1.2, max_iteration=500000, accuracy=0.00
     return q_n0, p
 
 def get_cnfs_null(method_fun, q0=np.deg2rad([0, 0, 0, 0, 0, 0, 0]), kwargs=dict()):
-    # pos = np.array([0.674, 0.0431, -0.13358, 0.0028, 1.5708, 0])        #0.5sec
-    # pos = np.array([0.674, 0.39453, -0.13358, 0.0028, 1.5708, 0])       #0.37sec
-    # pos = np.array([0.674, -0.2752, 0.36959, 0.0028, 1.5708, 0])        #9.1sec
-    # pos = np.array([0.67773, 0.41947, -0.1084, 0.0028, 1.5708, 0])      #0.37sec
-
     overallpos = posture_read()
-    # print(overallpos[8])
-    # q, p = method_fun(self.init_q, np.array(overallpos[8]), **kwargs)
+    J1, J2, J3, J4, J5, J6, index, pos = ([] for i in range(8))
     for i in range(len(overallpos)):
         q, p = method_fun(q0, np.array(overallpos[i]), **kwargs)
         print("pos", i, " ans : ", np.rad2deg(q))
-        # print("arrived: ", p.T)
-        # print(" ")
-
-    end_time = time.time()
-
+        index.append(i)
+        J1.append(q[0])
+        J2.append(q[1])
+        J3.append(q[2])
+        J4.append(q[3])
+        J5.append(q[4])
+        J6.append(q[5])
+        pos.append(np.around(np.array(overallpos[i]), decimals=4))
+    pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos}, index=index)
+    pos_record.to_excel('non_optimized_result.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
+    # print("arrived: ", p.T)
+    # print(" ")
 if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi
     pi_sym = sym.pi
-    # q = np.deg2rad(np.array([-8.56, 40.89, 136.83, -8.56, -87.34, -0.11]))
-    # plot_robot(q)
-    # jacobian_sym_func = jacobian_sym()
     get_cnfs_null(method_fun=simple_pseudo, q0=np.deg2rad([10 ,10, 10, 10, 10, 10, 0]))
