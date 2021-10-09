@@ -1,9 +1,13 @@
-# null space posture optimization
+# null space posture optimization for redundant manipulator
 
-Null space control for high stiffness posture optimization using Reinforcement learning.
+Null space control for high stiffness posture optimization
 
+## Conventional control
 
-## Setup
+Using Null space projection method for redundant manipulator
+to have high stiffness posture.
+
+## Installation
 
 ```bash
 # recommended
