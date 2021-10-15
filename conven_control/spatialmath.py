@@ -6,6 +6,12 @@ from math import *
 sym.init_printing()
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
 
+def rad2deg(q):
+  return q*180/pi
+
+def deg2rad(q):
+  return q*pi/180
+
 def find_T(R):
     rpy = euler_from_rotation(R)
     r = rpy[0]

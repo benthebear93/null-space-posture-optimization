@@ -9,16 +9,11 @@ np.set_printoptions(precision=4, suppress=True, linewidth=200)
 from spatialmath import *
 import dill
 import os
-
-import plotly.express as px
-import plotly.io as pio
-import plotly.graph_objects as go
-
 root = os.getcwd()
 
 def posture_read():
     # load_wb = load_workbook("C:/Users/UNIST/Desktop/stiffness_estimation/test_z.xlsx", data_only=True)
-    df = pd.read_excel('random_position.xlsx', header=None, names=None, index_col=None)
+    df = pd.read_excel('random_position_test_old.xlsx', header=None, names=None, index_col=None)
     num_test = df.shape[0]
 
     print("number of test: ",  (num_test-1)/2)
@@ -30,12 +25,11 @@ def posture_read():
             pos_val.append(a)
         overall_posval.append(pos_val)
         pos_val = []
-    print(overall_posval)
     return overall_posval
 
 def is_success(error):
     accuracy = 0.001
-    if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < 0.01 and abs(error[4]) < 0.01: 
+    if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < accuracy and abs(error[4]) < accuracy and abs(error[5]) < accuracy: 
         return True
 
 def Joint_limit_check(q):
@@ -44,14 +38,14 @@ def Joint_limit_check(q):
     elif q[0] <-3.14159:
         q[0] = -q[0]
 
-    if q[1]-1.5708 > 2.5744:
+    if q[1]-1.5708> 2.5744:
         q[1] = -2.57445 + q[1]
     elif q[1]-1.5708 <-2.2689:
         q[1] = -q[1]
 
-    if q[2] > 2.5307:
+    if q[2]-1.5708 > 2.5307:
         q[2] = -2.5307 + q[2]
-    elif q[2] < -2.5307:
+    elif q[2]-1.5708 < -2.5307:
         q[2] = -q[2]
 
     if q[3] > 4.7124:
@@ -91,13 +85,17 @@ def FK(joint_params):
     T45 = Homgm(dh_param4, q4, offset=0)
     T56 = Homgm(dh_param5, q5, offset=0)
     T67 = Homgm(dh_param6, q6, offset=0)
-    T7E = Homgm(dh_param7, q7, offset=0)
+    T7E = Homgm(dh_param7, 0, offset=0)
 
     TF = T12@T23@T34@T45@T56@T67@T7E
 
     return TF
 
-def simple_pseudo(q0, p_goal, time_step=1.2, max_iteration=500000, accuracy=0.001):
+def simple_pseudo(pos_num, q0, p_goal, time_step=1, max_iteration=500000, accuracy=0.001):
+
+    Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49]))
+    Ktheta_inv = np.linalg.inv(Ktheta)
+    F      = np.array([6.0, 6.0, 40.0, 0.0, 0.0, 0.0])
 
     goal_R = rotation_from_euler(p_goal[3:6])
     # Setting initial variables
@@ -119,45 +117,55 @@ def simple_pseudo(q0, p_goal, time_step=1.2, max_iteration=500000, accuracy=0.00
     q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
     while True:
         # print(" ")
-        # print(i, "/ 5000 ")
+        # print(pos_num, ":", i, "/ 50000 ")
+        # print(pos_num, ":", t_dot)
         # print(" ")
         if is_success(t_dot):
             print(f"Accuracy of {accuracy} reached")
             break
         q_n0 = Joint_limit_check(q_n0)
-        q_n0 = q_n0 + (δt * q_dot)  
-        q_n0[6] = 0
+        q_n0 = q_n0 +(δt * q_dot)
+        #q_n0[6] = 0
+
         p = FK(q_n0)[:3,-1]
         R = FK(q_n0)[:3,:-1] # Rotation matrix
         p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
 
         T = find_T(R)
         invT = np.linalg.inv(T)
+
         J = J_func(q_n0)
         J_a = np.block([[np.eye(3), np.zeros((3,3))],[np.zeros((3, 3)), invT]]) @ J
         J_inv = np.linalg.pinv(J_a) 
 
         t_dot = p_goal - p
+        c = np.array([0.01,0.01,0.01,0.01,0.01,0.01])
+
+        J_temp =J[:,:6]@Ktheta_inv@J[:,:6].T
+        dxyz = J_temp@F[:6] 
+        #psd_J = J_a.T@ np.linalg.inv((J_a@J_a.T))#  + c.T@np.eye(6)
         q_dot = (J_inv @ t_dot)*0.1
-        if is_success(t_dot):
-            break
         i+=1
         if (i > max_iteration):
             print("No convergence")
             break
 
-    end_time = time.time()
-    print(f"Total time taken {np.round(end_time - start_time, 4)} seconds\n")
-
-    return q_n0, p
+    rpy = euler_from_rotation(R)
+    p[3] = rpy[0]
+    p[4] = rpy[1]
+    p[5] = rpy[2]
+    return q_n0, p, dxyz
 
 def get_cnfs_null(method_fun, q0=np.deg2rad([0, 0, 0, 0, 0, 0, 0]), kwargs=dict()):
+    # pos = np.array([0.650, -0.35, -0.278, 0, 1.57079, 0])
+    # q, p, d_xyz = method_fun(0, q0, pos, **kwargs)
+    # print(0, " pos", p, "\n ans : ", np.rad2deg(q))
     overallpos = posture_read()
-    J1, J2, J3, J4, J5, J6, index, pos = ([] for i in range(8))
+    J1, J2, J3, J4, J5, J6, index, pos, dx,dy,dz = ([] for i in range(11))
     for i in range(len(overallpos)):
-        q, p = method_fun(q0, np.array(overallpos[i]), **kwargs)
-        print("pos", i, " ans : ", np.rad2deg(q))
-        index.append(i)
+        q, p, d_xyz = method_fun(i, q0, np.array(overallpos[i]), **kwargs)
+        print(i, " pos", p, "\n ans : ", np.rad2deg(q))
+        index.append(0)
         J1.append(q[0])
         J2.append(q[1])
         J3.append(q[2])
@@ -165,10 +173,12 @@ def get_cnfs_null(method_fun, q0=np.deg2rad([0, 0, 0, 0, 0, 0, 0]), kwargs=dict(
         J5.append(q[4])
         J6.append(q[5])
         pos.append(np.around(np.array(overallpos[i]), decimals=4))
-    pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos}, index=index)
-    pos_record.to_excel('non_optimized_result.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
-    # print("arrived: ", p.T)
-    # print(" ")
+        dx.append(d_xyz[0])
+        dy.append(d_xyz[1])
+        dz.append(d_xyz[2])
+    pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos, 'dx':dx, 'dy':dy, 'dz':dz}, index=index)
+    pos_record.to_excel('new_non_optimized_result.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
+
 if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi

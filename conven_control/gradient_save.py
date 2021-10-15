@@ -7,11 +7,11 @@ from spatialmath import *
 import pickle
 import dill
 
-Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49], dtype=np.float64)) # 3x3 
+Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49])) # 3x3 
 root = os.getcwd()
 
 def external_force(): 
-    F = np.array([[3.0], [3.0], [20.0], [0.0], [0.0], [0.0]])
+    F = np.array([[1.0], [1.0], [20.0], [0.0], [0.0], [0.0]])
     return F
 
 def FK(joint_params):
@@ -74,16 +74,16 @@ def jacobian_sym():
 
     
     R = TF[:3,:-1]
-    jacobian = sym.Matrix([])
-    jacobian_ori = sym.Matrix([])
+    jacobian      = sym.Matrix([])
+    jacobian_ori  = sym.Matrix([])
     jacobian_null = sym.Matrix([])
-    target_f = sym.Matrix([])
+    target_f      = sym.Matrix([])
 
-    T_d = sym.diff(TF_Extend, var2) # additional link 
+    T_d  = sym.diff(TF_Extend, var2) # additional link 
     T    = T_d[0:3, -1]
     R_d  = T_d[0:3, :-1]
     R_j  = R_d @ R.T 
-    J_Extend = T.row_insert(3, sym.Matrix([ R_j[2,1], R_j[0,2], R_j[1,0] ]))
+    J_Extend   = T.row_insert(3, sym.Matrix([ R_j[2,1], R_j[0,2], R_j[1,0] ]))
     J_n_Extend = T.row_insert(2, sym.Matrix([ R_j[2,1], R_j[0,2] ]))
 
     for var in variables[:6]:
@@ -98,23 +98,26 @@ def jacobian_sym():
         J_null = T.row_insert(2, sym.Matrix([R_j[2,1], R_j[0,2]])) # null space control jacobian 
         jacobian = jacobian.col_insert(len(jacobian), J) # 6x1 translation + rotation diff 
         jacobian_null = jacobian_null.col_insert(len(jacobian_null), J_null) # 6x1 translation + rotation diff 
-    jacobian_ori = jacobian #for target function
 
-    jacobian = jacobian.col_insert(len(jacobian), J_Extend) # additional link jacobian
+    jacobian_ori  = jacobian #for target function
+    jacobian      = jacobian.col_insert(len(jacobian), J_Extend) # additional link jacobian
     jacobian_null = jacobian_null.col_insert(len(jacobian_null), J_n_Extend) # additional link jacobian
 
-    jacobian = sym.nsimplify(jacobian,tolerance=1e-5,rational=True)
+    jacobian      = sym.nsimplify(jacobian,tolerance=1e-5,rational=True)
     jacobian_null = sym.nsimplify(jacobian_null,tolerance=1e-5,rational=True)
 
     F = external_force()
     Ktheta_inv = np.linalg.inv(Ktheta)
-    target_jacobian = jacobian_ori @ Ktheta_inv @ jacobian_ori.T @ F # 2x3 @ 3x3 @ 3x2 @ 2x1 = 2x1
+    target_jacobian = (jacobian_ori @ Ktheta_inv @ jacobian_ori.T) @ F # 2x3 @ 3x3 @ 3x2 @ 2x1 = 2x1
     print("  ")
     print("shape :", target_jacobian.shape, type(target_jacobian))
     print("  ")
 
-    H =0.5*(target_jacobian.row(2)@target_jacobian.row(2))# target function for optimization 
-
+    norm = 0.5*(target_jacobian.row(0)*target_jacobian.row(0)+target_jacobian.row(1)*target_jacobian.row(1))
+    print("calculationg norm")
+    H =sym.Matrix([norm])#+target_jacobian.row(1)@target_jacobian.row(1)+target_jacobian.row(0)@target_jacobian.row(0))# target function for optimization 
+    print("calculationg norm")
+    print(type(H), H.shape)
     for var in variables:
         print("calculating gradient")
         T_d = sym.diff(H, var)

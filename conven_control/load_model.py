@@ -45,7 +45,7 @@ if __name__ == "__main__":
         y_stiffness = StiffEstimator('optimized_result.xlsx', model_name[1], "y", arg[1])
         z_stiffness = StiffEstimator('optimized_result.xlsx', model_name[2], "z", arg[1])
     else:
-        x_stiffness = StiffEstimator('non_optimized_result.xlsx', model_name[0], "x", arg[1])
-        y_stiffness = StiffEstimator('non_optimized_result.xlsx', model_name[1], "y", arg[1])
-        z_stiffness = StiffEstimator('non_optimized_result.xlsx', model_name[2], "z", arg[1])
+        x_stiffness = StiffEstimator('new_non_optimized_result.xlsx', model_name[0], "x", arg[1])
+        y_stiffness = StiffEstimator('new_non_optimized_result.xlsx', model_name[1], "y", arg[1])
+        z_stiffness = StiffEstimator('new_non_optimized_result.xlsx', model_name[2], "z", arg[1])
     
