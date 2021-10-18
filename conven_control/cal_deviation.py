@@ -88,7 +88,7 @@ if __name__=="__main__":
     dxyz = deviation(q)
     print("opt :", dxyz)
 
-    q = np.deg2rad(np.array([ -43.35,	49.885,	103.146,	133.308,	70.717,	199.214]))
+    q = np.deg2rad(np.array([-39.076,	45.97,	107.678	,-28.401,	-65.783+90,	12.138-90]))
     dxyz = deviation(q)
     print("non opt:", dxyz)
 
@@ -107,5 +107,5 @@ if __name__=="__main__":
     # q = np.deg2rad(np.array([-13.184,	43.719,	122.137,	166.367,	76.201,	183.25]))
     # dxyz = deviation(q)
     # print("non opt:", dxyz)
-    cal_dev('ros_non_optimized_result.xlsx')
-    cal_dev('optimized_result.xlsx')
+    # cal_dev('ros_non_optimized_result.xlsx')
+    # cal_dev('optimized_result.xlsx')
