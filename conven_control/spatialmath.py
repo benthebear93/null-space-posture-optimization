@@ -5,6 +5,29 @@ import sympy as sym
 from math import *
 sym.init_printing()
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
+from scipy.spatial.transform import Rotation as R
+
+
+def quaternion_matrix(quaternion):
+    """Return homogeneous rotation matrix from quaternion.
+    R = quaternion_matrix([0.06146124, 0, 0, 0.99810947])
+    numpy.allclose(R, rotation_matrix(0.123, (1, 0, 0)))
+    True
+    """
+    _EPS = np.finfo(float).eps * 4.0
+    print(quaternion)
+    q = np.array(quaternion[:4], dtype=np.float64, copy=True)
+    nq = np.dot(q, q)
+    if nq < _EPS:
+        return np.identity(4)
+    q *= sqrt(2.0 / nq)
+    q = np.outer(q, q)
+    return np.array((
+        (1.0-q[1, 1]-q[2, 2],     q[0, 1]-q[2, 3],     q[0, 2]+q[1, 3], 0.0),
+        (    q[0, 1]+q[2, 3], 1.0-q[0, 0]-q[2, 2],     q[1, 2]-q[0, 3], 0.0),
+        (    q[0, 2]-q[1, 3],     q[1, 2]+q[0, 3], 1.0-q[0, 0]-q[1, 1], 0.0),
+        (                0.0,                 0.0,                 0.0, 1.0)
+        ), dtype=np.float64)
 
 def rad2deg(q):
   return q*180/pi
@@ -25,7 +48,7 @@ def find_T(R):
     return T
 
 def rotation_from_euler(euler):
-  R = Rz(euler[2]) @ Ry(euler[1]) @ Rx(euler[0])
+  R = Rz(euler[0]) @ Ry(euler[1]) @ Rx(euler[2])
   return R
 
 def euler_from_rotation(R, sndSol=True):

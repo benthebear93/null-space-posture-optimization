@@ -15,6 +15,7 @@ import dill
 def posture_read():
 
     df = pd.read_excel('random_position_quat.xlsx', header=None, names=None, index_col=None)
+    print(df)
     num_test = df.shape[0]
 
     # print("number of test: ",  num_test)
@@ -27,6 +28,7 @@ def posture_read():
         overall_posval.append(pos_val)
         pos_val = []
     # print(overall_posval)
+    #print(overall_posval[0])
     return overall_posval
 
 
@@ -38,24 +40,14 @@ class OptimalIK:
         self.accuracy      = accuracy
         self.max_iteration = max_iteration
         self.c         = np.array([0.1, 0.1, 0.1, 0.1, 0.1]) #Tikhonov
-        self.F         = np.array([0.0, 0.0, 40.0, 0.0, 0.0, 0.0])
+        self.F         = np.array([[6.0], [6.0], [40.0], [0.0], [0.0], [0.0]])
         self.init_q    = np.array([0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0]) # avoid singurality
         # self.K         = np.array([[1.1], [1.1], [1.1], [0.1], [0.5], [1.1], [0]]) # avoid singurality
-
-    # def external_force(self): 
-    #     '''
-    #     External force 
-    #     Output : Fx, Fy, Fz, Mx, My, Mz 
-    #     shape  :(6x1)
-    #     '''
-    #     F = np.array([[3.0], [3.0], [-20.0], [0.0], [0.0], [0.0]])
-    #     return F 
 
     def FK(self, joint_params):
         '''
         Joint variables consisting of 7 parameters
         ''' 
-
         joint_params = np.asarray(joint_params, dtype=float)
         q1, q2, q3, q4, q5, q6, q7 = joint_params
         dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
@@ -120,9 +112,8 @@ class OptimalIK:
         return q
     
     def is_success(self, error):
-        
         accuracy = self.accuracy
-        if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < 0.001 and abs(error[4]) < 0.001: 
+        if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < accuracy and abs(error[4]) < accuracy: 
             return True
 
     def null_space_method(self,pos_num, q0, p_goal):
@@ -131,70 +122,83 @@ class OptimalIK:
         '''
         max_iteration=500000
         Ktheta_inv = np.linalg.inv(self.Ktheta)
+
         q = [p_goal[3],p_goal[4],p_goal[5],p_goal[6]]
         goal_R = quaternion_matrix(p_goal[3:7])
-
-        #goal_R = rotation_from_euler(p_goal[3:6])
+        print(goal_R)
         q_n0 = q0
 
         p = self.FK(q_n0)[:3,-1] # position 
         R = self.FK(q_n0)[:3, :-1] # Rotation matrix
+        #print(R)
+        #print(R[2][0],R[2][1],R[1][0]) #r31, r32, r21
+        roll  = goal_R[2][0]
+        pitch = goal_R[2][1]
+        yaw   = goal_R[1][0]
+        print(roll, pitch, yaw)
+        p_goal[3] = pitch
+        p_goal[4] = yaw
+        p_goal[5] = roll
 
-        p_goal[3] = goal_R[2][0]
-        p_goal[4] = goal_R[2][1]
-        p_goal[5] = goal_R[1][0] # Goal position = [x, y, z R31, R32, R21]
-        p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0] ]) #shape (6,1) = [x, y, z R31, R32, R21]
+        # p_goal[3] = goal_R[2][0]
+        # p_goal[4] = goal_R[2][1]
+        # p_goal[5] = goal_R[1][0] # Goal position = [x, y, z R31, R32, R21] r, p, y
+        p = np.array([p[0], p[1], p[2], R[2][1], R[1][0], R[2][0] ]) #shape (6,1) = [x, y, z R31, R32, R21]
+        
         t_dot = p_goal[:5] - p[:5] # redundancy Rz remove (5,1)
+
         δt = self.time_step
         c = self.c
 
         i=0
 
         J_func    = dill.load(open(self.root+'/param_save/J_func_simp', "rb"))
-        #Jn_func    = dill.load(open(self.root+'/param_save/Jn_func_simp', "rb"))
+        Jn_func    = dill.load(open(self.root+'/param_save/Jn_func_simp', "rb"))
         H_func    = dill.load(open(self.root+'/param_save/H_func_simp', "rb"))
 
         q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
         while True:
             if self.is_success(t_dot):
-                # print("deviation : ", dxyz)
-                # print(f"Accuracy of {self.accuracy} reached")
                 break
             q_n0 = self.Joint_limit_check(q_n0) 
             q_n0 = q_n0 + (δt * q_dot) 
-            #q_n0[6] = 0
 
             p = self.FK(q_n0)[:3,-1]
             R = self.FK(q_n0)[:3,:-1] # Rotation matrix
-            p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0] ]) #shape (5,1) = [x, y, z R31, R32, R21]
+            p = np.array([ p[0], p[1], p[2], R[2][1], R[1][0],  R[2][0] ]) #shape (5,1) = [x, y, z R31, R32, R21]
             
             T = find_T(R)
             invT = np.linalg.inv(T)
 
             J = J_func(q_n0)
-            J_a = np.block([[np.eye(3), np.zeros((3,3))],[np.zeros((3, 3)), invT]]) @ J
+            J_a = np.block([[np.eye(3), np.zeros((3,3))],[np.zeros((3, 3)), invT]]) @ J # (6,7)
+            #print(J_a.shape, J_a[0])
 
-            J_na = J_a[:5]
+            J_na = np.array([ J_a[0], J_a[1], J_a[2], J_a[4], J_a[5] ])    #J_a[:5]
             t_dot = p_goal[:5] - p[:5] # redundancy Rz remove (5,1)
 
-            gH = np.array(H_func(q_n0)[0])    # gradient of cost function 
-            gH = np.array([gH[0],gH[1],gH[2],0,0,0,0 ])
-            psd_J = J_na.T@ np.linalg.inv((J_na@J_na.T + c.T@np.eye(5)))# + c.T@np.eye(5) (7,5)
+            gH = np.array(H_func(q_n0)[0])  # gradient of cost function 
+            #! gH = [x,y,z, 0, 0, 0]?
+            #gH = np.array([ gH[0],gH[1],gH[2],gH[3],gH[4],gH[5],gH[6] ])
+            #print(c.shape,np.eye(5).shape)
+            psd_J = J_na.T@ np.linalg.inv((J_na@J_na.T + c.T@np.eye(5)))# (7,5) ((5,7)(7,5) + (5,5)) = (7,5)
+
             K_  = 1.0
-            Kn_ = 0.001
+            Kn_ = 0.1
+            
             J_temp =J[:,:6]@Ktheta_inv@J[:,:6].T
-            dxyz = J_temp@self.F
+            dxyz = J_temp@self.F # deviation 
+
             if i % 100 ==0:
                 print(pos_num, i, " t_dot: ", t_dot.T)
                 print("devi :", dxyz)
-            #print("gH:\n", gH)
-            q_dot = K_*psd_J @ t_dot -Kn_*(np.eye(7) - (psd_J @ J_na))@gH # 6x5 5x1    - (6x6-6x5 5x6) 7x1
-            #print(qdot)
-            #q_dot = np.array([qdot[0][0], qdot[1][0], qdot[2][0], qdot[3][0], qdot[4][0], qdot[5][0], qdot[6][0]]) # shape miss match (5,1) from (5,)
-            #print(q_dot)
+
+            q_dot = K_*psd_J @ t_dot -Kn_*(np.eye(7) - (psd_J @ J_na))@gH # (7,5)(5,1) -( (7,7) - (7,5)(5,7))(7,1) = (7,1)
+
             # dx.append(dxyz[0])
             # dy.append(dxyz[1]) 
             # dz.append(dxyz[2]) # for plot errors
+
             i+=1
             if (i > max_iteration):
                 print("No convergence")
@@ -214,9 +218,10 @@ class OptimalIK:
         overallpos = posture_read()
         J1, J2, J3, J4, J5, J6, index, pos, dx,dy,dz = ([] for i in range(11))
         # q, p, d_xyz = method_fun(0, self.init_q, np.array(overallpos[0]), **kwargs)
+        
         for i in range(len(overallpos)):
             q, p, d_xyz = method_fun(i, self.init_q, np.array(overallpos[i]), **kwargs)
-            print("pos\n", i, p, " ans : ", np.rad2deg(q))
+            print("pos\n", i, p, " ans : ", np.rad2deg(q), "dev:", d_xyz)
             index.append(i)
             J1.append(q[0])
             J2.append(q[1])
@@ -225,17 +230,17 @@ class OptimalIK:
             J5.append(q[4])
             J6.append(q[5])
             pos.append(np.around(np.array(overallpos[i]), decimals=4))
-            dx.append(d_xyz[0])
-            dy.append(d_xyz[1])
-            dz.append(0.5*(d_xyz[0]*d_xyz[0]+d_xyz[1]*d_xyz[1]))
+            dx.append(d_xyz[0][0])
+            dy.append(d_xyz[1][0])
+            dz.append(d_xyz[2][0])
         pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos, 'dx':dx, 'dy':dy, 'dz':dz}, index=index)
-        pos_record.to_excel('optimized_result_fast.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
+        pos_record.to_excel('optimized_result_quat.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
 
 if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi
     pi_sym = sym.pi
-    PosPlane = OptimalIK(0.1, 0.001, 50000)
+    PosPlane = OptimalIK(1.5, 0.001, 50000)
     # test = np.array([0.361652, 1.35713, 0.69029, 4.3405, 0.95651, 2.16569, 0]))
     # PosPlane.fk(test)
     # start = time.time()

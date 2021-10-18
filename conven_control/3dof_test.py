@@ -56,7 +56,7 @@ def jacobian_sym():
 
       #J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # [T_d; R_d]
       jacobian = jacobian.col_insert(len(jacobian), T) # 6x1 translation + rotation diff 
-
+  print(jacobian.shape)
   return sym.lambdify([variables], jacobian, "numpy") # Convert a SymPy expression into a function that allows for fast numeric evaluation.
 
 def jacobian(joint_params):
@@ -146,6 +146,9 @@ def null_space_method(q0, p_goal, weights=[1,3,1], time_step=0.01, max_iteration
     temp  = J@J.T
     temp2 = c.T@np.eye(2)
     temp3 = J@J.T + c.T@np.eye(2)
+    # print(temp0, temp0.shape)
+    # print(temp, temp.shape)
+    # print(temp2, temp2.shape)
 
     # print("temp3 :", temp3)
     temp4 = np.linalg.inv((J@J.T + c.T@np.eye(2)))
@@ -156,7 +159,7 @@ def null_space_method(q0, p_goal, weights=[1,3,1], time_step=0.01, max_iteration
     # print("seudo inv j: ", psd_J)
     # print(J.shape, temp0.shape, temp.shape, temp2.shape, temp3.shape, temp4.shape, psd_J.shape)
     dh = np.array([2*q_n0[0], 2*q_n0[1], 0])
-    q_dot = psd_J @ t_dot - 0.1*(np.eye(3) - (psd_J @ J))@dh.T
+    q_dot = psd_J @ t_dot - 0.5*(np.eye(3) - (psd_J @ J))@dh.T
     dq1.append(dh[0])
     dq2.append(dh[1])
     q_n1 = q_n0 + (δt * q_dot)

@@ -3,6 +3,7 @@ import time
 import numpy as np
 import sympy as sym
 sym.init_printing()
+
 from spatialmath import *
 import pickle
 import dill
