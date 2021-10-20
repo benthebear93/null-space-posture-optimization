@@ -4,7 +4,9 @@ import pandas as pd
 import matplotlib.ticker as ticker
 
 def stiffness_figure(opt_file, nonopt_file):
-    # load_wb = load_workbook("C:/Users/UNIST/Desktop/stiffness_estimation/test_z.xlsx", data_only=True)
+    opt_file    = "../data/"+opt_file
+    nonopt_file = "../data/"+nonopt_file
+
     opt_df = pd.read_excel(opt_file, header=None, names=None, index_col=None)
     nonopt_df = pd.read_excel(nonopt_file, header=None, names=None, index_col=None)
     num_posture = len(opt_df[0])-1
@@ -13,14 +15,13 @@ def stiffness_figure(opt_file, nonopt_file):
 
     deviation_num = 0
     deviation_data = [ nonopt_df[10][1:],opt_df[10][1:] ]
-    print("non: ", nonopt_df[10][1:])
-    print("opt: ", opt_df[10][1:])
+    
     for i in range(1, num_posture+1):
         deviation = opt_df[10][i]-nonopt_df[10][i]
         if deviation < 0:
             deviation_num+=1
             
-    print(deviation_num, "out of", num_posture)
+    print(deviation_num, "out of", num_posture, "is optimized")
 
     fig, ax = plt.subplots()
     plt.setp(ax.spines.values(), linewidth=1.7)

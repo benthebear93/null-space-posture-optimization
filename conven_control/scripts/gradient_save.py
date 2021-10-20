@@ -128,11 +128,11 @@ def jacobian_sym():
     print("  ")
     print("shape :", jacobian.shape, jacobian_null.shape, target_f.shape)
     print("  ")
-    with open(root+'/param_save/Jacobian.txt','wb') as f:
+    with open(root+'../param_save/Jacobian.txt','wb') as f:
         pickle.dump(jacobian,f)
-    with open(root+'/param_save/Jacobian_null.txt','wb') as f:
+    with open(root+'../param_save/Jacobian_null.txt','wb') as f:
         pickle.dump(jacobian_null,f)
-    with open(root+'/param_save/target_f.txt','wb') as f:
+    with open(root+'../param_save/target_f.txt','wb') as f:
         pickle.dump(target_f,f)
     return sym.lambdify([variables], jacobian_null, "numpy"), sym.lambdify([variables], target_f, "numpy") # Convert a SymPy expression into a function that allows for fast numeric evaluation.
 
@@ -143,11 +143,11 @@ if __name__ == "__main__":
     jacobian_null = sym.Matrix([])
     Hessian = sym.Matrix([])
     
-    with open(root+'/param_save/Jacobian.txt','rb') as f:
+    with open(root+'../param_save/Jacobian.txt','rb') as f:
         jacobian = pickle.load(f)
-    with open(root+'/param_save/target_f.txt','rb') as f:
+    with open(root+'../param_save/target_f.txt','rb') as f:
         target_f = pickle.load(f)
-    with open(root+'/param_save/Jacobian_null.txt','rb') as f:
+    with open(root+'../param_save/Jacobian_null.txt','rb') as f:
         jacobian_null = pickle.load(f)
 
     q1, q2, q3, q4, q5, q6, q7 = sym.symbols("q_1 q_2 q_3 q_4 q_5 q_6 q_7", real=True) 
@@ -157,6 +157,6 @@ if __name__ == "__main__":
     H_func = sym.lambdify([variables], target_f, modules='numpy')
 
     dill.settings['recurse'] = True
-    dill.dump(J_func, open(root+'\param_save\J_func_simp', "wb"))
-    dill.dump(Jn_func, open(root+'\param_save\Jn_func_simp', "wb"))
-    dill.dump(H_func, open(root+'\param_save\H_func_simp', "wb"))
+    dill.dump(J_func, open(root+'..\param_save\J_func_simp', "wb"))
+    dill.dump(Jn_func, open(root+'..\param_save\Jn_func_simp', "wb"))
+    dill.dump(H_func, open(root+'..\param_save\H_func_simp', "wb"))

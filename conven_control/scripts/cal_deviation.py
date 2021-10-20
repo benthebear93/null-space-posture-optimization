@@ -13,7 +13,7 @@ np.set_printoptions(precision=4, suppress=True, linewidth=200)
 from spatialmath import *
 import dill
 
-def FK(joint_params):
+def fk(joint_params):
     """
     Joint variables consisting of 6 parameters
     """
@@ -45,7 +45,7 @@ def deviation(q):
     Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49]))
     Ktheta_inv = np.linalg.inv(Ktheta)
     F      = np.array([0.0, 0.0, 40.0, 0.0, 0.0, 0.0])
-    R = FK(q)[:3, :-1] # Rotation matrix
+    R = fk(q)[:3, :-1] # Rotation matrix
 
     T = find_T(R)
     invT = np.linalg.inv(T)

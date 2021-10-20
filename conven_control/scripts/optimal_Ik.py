@@ -14,7 +14,7 @@ import dill
 
 def posture_read():
 
-    df = pd.read_excel('random_position_quat.xlsx', header=None, names=None, index_col=None)
+    df = pd.read_excel('../data/random_position_quat.xlsx', header=None, names=None, index_col=None)
     num_test = df.shape[0]
 
     # print("number of test: ",  num_test)
@@ -150,9 +150,9 @@ class OptimalIK:
 
         i=0
 
-        J_func    = dill.load(open(self.root+'/param_save/J_func_simp', "rb"))
+        J_func    = dill.load(open(self.root+'../data//param_save/J_func_simp', "rb"))
         #Jn_func    = dill.load(open(self.root+'/param_save/Jn_func_simp', "rb"))
-        H_func    = dill.load(open(self.root+'/param_save/H_func_simp', "rb"))
+        H_func    = dill.load(open(self.root+'../data//param_save/H_func_simp', "rb"))
 
         q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
         while True:
@@ -229,7 +229,7 @@ class OptimalIK:
             dy.append(d_xyz[1])
             dz.append(0.5*(d_xyz[0]*d_xyz[0]+d_xyz[1]*d_xyz[1]))
         pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos, 'dx':dx, 'dy':dy, 'dz':dz}, index=index)
-        pos_record.to_excel('optimized_result_fast.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
+        pos_record.to_excel('../data/optimized_result_fast.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
 
 if __name__ == "__main__":
     # Length of Links in meters

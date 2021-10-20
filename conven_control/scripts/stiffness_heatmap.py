@@ -112,7 +112,7 @@ def heatmap_read(filename, axisname):
     fig.tight_layout()
     plt.show()
 if __name__ == "__main__":
-    filename = ["x_stiffness_compare.xlsx", "y_stiffness_compare.xlsx", "z_stiffness_compare.xlsx"]
+    filename = ["../data/x_stiffness_compare.xlsx", "../data/y_stiffness_compare.xlsx", "../data/z_stiffness_compare.xlsx"]
     axisname = ["x", "y", "z"]
     for i in range(3):
         heatmap_read(filename[i], axisname[i])

@@ -40,7 +40,7 @@ if __name__ == "__main__":
         print("[Error] : No argument given, try 'non' or 'opt' as argument")
         sys.exit(1)
         
-    model_name =["x_stiffness", "y_stiffness", "z_stiffness"]
+    model_name =["../model/x_stiffness", "../model/y_stiffness", "../model/z_stiffness"]
     if arg[1] == 'opt':
         x_stiffness = StiffEstimator('optimized_result.xlsx', model_name[0], "x", arg[1])
         y_stiffness = StiffEstimator('optimized_result.xlsx', model_name[1], "y", arg[1])

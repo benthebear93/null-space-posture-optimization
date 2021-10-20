@@ -73,8 +73,6 @@ def stiffness_figure(opt_file, nonopt_file):
         ax.legend( (rect1[0], rect2[0]), ('Non_optimized', 'optimized') )
         plt.show()
 
-
-
 if __name__ == "__main__":
-    filename = ["optimized_result.xlsx", "new_non_optimized_result.xlsx"]
+    filename = ["../data/optimized_result.xlsx", "../data/new_non_optimized_result.xlsx"]
     stiffness_figure(filename[0], filename[1])

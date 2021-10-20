@@ -13,7 +13,7 @@ root = os.getcwd()
 
 def posture_read():
     # load_wb = load_workbook("C:/Users/UNIST/Desktop/stiffness_estimation/test_z.xlsx", data_only=True)
-    df = pd.read_excel('random_position_quat.xlsx', header=None, names=None, index_col=None)
+    df = pd.read_excel('../data/random_position_quat.xlsx', header=None, names=None, index_col=None)
     num_test = df.shape[0]
 
     print("number of test: ",  (num_test-1)/2)
@@ -115,7 +115,7 @@ def simple_pseudo(pos_num, q0, p_goal, time_step=1, max_iteration=500000, accura
     i=0
 
     start_time = time.time()
-    J_func    = dill.load(open(root+'/param_save/J_func_simp', "rb"))
+    J_func    = dill.load(open(root+'../data/param_save/J_func_simp', "rb"))
     print("start runnign")
     q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
     while True:
@@ -178,7 +178,7 @@ def get_cnfs_null(method_fun, q0, kwargs=dict()):
         dy.append(d_xyz[1])
         dz.append(d_xyz[2])
     pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos, 'dx':dx, 'dy':dy, 'dz':dz}, index=index)
-    pos_record.to_excel('non_optimized_result.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
+    pos_record.to_excel('../data/non_optimized_result.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
 
 if __name__ == "__main__":
     # Length of Links in meters
