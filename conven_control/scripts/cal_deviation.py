@@ -44,7 +44,7 @@ def deviation(q):
     q = np.append(q, 0)
     Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49]))
     Ktheta_inv = np.linalg.inv(Ktheta)
-    F      = np.array([0.0, 0.0, 40.0, 0.0, 0.0, 0.0])
+    F      = np.array([6.0, 6.0, -40.0, 0.0, 0.0, 0.0])
     R = fk(q)[:3, :-1] # Rotation matrix
 
     T = find_T(R)
@@ -84,28 +84,30 @@ def cal_dev(filename):
     df.to_excel(filename, index=False, float_format="%.3f", header=False)
 
 if __name__=="__main__":
-    q = np.deg2rad(np.array([-39.076,	45.97,	107.678	,-28.401,	-65.783,	12.138]))
-    dxyz = deviation(q)
-    print("opt :", dxyz)
-
-    q = np.deg2rad(np.array([-39.076,	45.97,	107.678	,-28.401,	-65.783+90,	12.138-90]))
-    dxyz = deviation(q)
-    print("non opt:", dxyz)
-
-    # q = np.deg2rad(np.array([-24.123,	42.317,	118.672,	-9.676,	-71.182,	3.023]))
+    # q = np.deg2rad(np.array([-39.076,	45.97,	107.678	,-28.401,	-65.783,	12.138]))
     # dxyz = deviation(q)
     # print("opt :", dxyz)
 
-    # q = np.deg2rad(np.array([ -30.275,	45.5,	115.93,	148.417,	74.009,	189.556]))
+    # q = np.deg2rad(np.array([-39.076,	45.97,	107.678	,-28.401,	-65.783+90,	12.138-90]))
     # dxyz = deviation(q)
     # print("non opt:", dxyz)
+
+    # # q = np.deg2rad(np.array([-24.123,	42.317,	118.672,	-9.676,	-71.182,	3.023]))
+    # # dxyz = deviation(q)
+    # # print("opt :", dxyz)
+
+    # # q = np.deg2rad(np.array([ -30.275,	45.5,	115.93,	148.417,	74.009,	189.556]))
+    # # dxyz = deviation(q)
+    # # print("non opt:", dxyz)
     
-    # q = np.deg2rad(np.array([-4.994,	41.283,	121.859,	13.089,	-73.441,	-3.882]))
-    # dxyz = deviation(q)
-    # print("opt :", dxyz)
+    # # q = np.deg2rad(np.array([-4.994,	41.283,	121.859,	13.089,	-73.441,	-3.882]))
+    # # dxyz = deviation(q)
+    # # print("opt :", dxyz)
 
-    # q = np.deg2rad(np.array([-13.184,	43.719,	122.137,	166.367,	76.201,	183.25]))
-    # dxyz = deviation(q)
-    # print("non opt:", dxyz)
-    # cal_dev('ros_non_optimized_result.xlsx')
-    # cal_dev('optimized_result.xlsx')
+    # # q = np.deg2rad(np.array([-13.184,	43.719,	122.137,	166.367,	76.201,	183.25]))
+    # # dxyz = deviation(q)
+    # # print("non opt:", dxyz)
+    root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+
+    cal_dev(root+'/data/ros_data.xlsx')
+    # cal_dev(root+'/data/optimized_result_fast_test.xlsx')

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import matplotlib.ticker as ticker
+#from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
 def stiffness_figure(opt_file, nonopt_file):
     opt_file    = "../data/"+opt_file
@@ -30,8 +31,9 @@ def stiffness_figure(opt_file, nonopt_file):
 
     ax.set_title("Non optimized vs optimized deviation", fontsize=17)
     ax.set_xlabel('Posture'  , fontsize = 16)
-    ax.set_ylabel('deviation', fontsize = 16)
+    ax.set_ylabel('Deviation', fontsize = 16)
 
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
     ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
 
@@ -43,12 +45,13 @@ def stiffness_figure(opt_file, nonopt_file):
 
     ax.tick_params(axis="y", direction="in", which='major', labelsize=13, width=2)
     ax.tick_params(axis="y", direction="in", which='minor', labelsize=13)
-    rect1 = ax.bar(index, deviation_data[0], width, color = 'r' )
-    rect2 = ax.bar(index+width, deviation_data[1], width, color = 'b' )
-
+    rect1 = ax.bar(index+1, deviation_data[0], width, color = 'r' )
+    rect2 = ax.bar(index+1+width, deviation_data[1], width, color = 'b' )
+    
+    ax.grid(color='#A2A6AB', axis='y')
     ax.legend( (rect1[0], rect2[0]), ('Non_optimized', 'optimized') )
     plt.show()
 
 if __name__ == "__main__":
-    filename = ["optimized_result.xlsx", "ros_non_optimized_result.xlsx"]
+    filename = ["opt_data.xlsx", "ros_data.xlsx"]
     stiffness_figure(filename[0], filename[1])
