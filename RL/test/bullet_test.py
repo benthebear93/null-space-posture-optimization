@@ -32,11 +32,11 @@ def fk(jointpos):
     ee_state = p.getLinkState(robotID, eefID)
     ee_pos = np.array(ee_state[0])
     print(eefID, ":", ee_pos)
-    print(eefID, ":", ee_state[1])
+    # print(eefID, ":", ee_state[1])
     return ee_pos
 
 def posture_read(filename):
-    root = 'C:/Users/UNIST/Desktop/git/null-space-posture-optimization/conven_control/' #os.getcwd()
+    root = '/home/benlee/Desktop/git/null-space-posture-optimization/conven_control/' #os.getcwd()
     print("reading posture data...")
     df = pd.read_excel(root+filename, header=None, names=None, index_col=None)
     # loc start at 1 , 1~7 for joint values
@@ -73,17 +73,19 @@ if __name__ == "__main__":
 
     joints, controlJoints = utils_tx90.setup_tx90(p, robotID) #get joints and controllable joints
     joint_init = [deg2rad(0), deg2rad(0), deg2rad(90), deg2rad(0), deg2rad(0), deg2rad(0)]
-    filename = ['new_non_optimized_result.xlsx', 'optimized_result.xlsx']
-    print("here")
+    filename = ['non_optimized_result.xlsx', 'optimized_result.xlsx']
     non_q = posture_read(filename[0])
     opt_q = posture_read(filename[1])
     num_test = len(non_q)
-    #base = fk(deg2rad(np.array([12.5485, 42.3133, 118.4081, 208.8844, 72.9700, -189.1825])))
-    sleep(5)
+    # base = fk(np.deg2rad(np.array([ -43.35,	49.885,	103.146,	133.308,	70.717,	199.214])))
+    # sleep(10)
+
+    # base = fk(np.deg2rad(np.array([  -2.4078 ,  93.7485  ,  5.4139  , 87.3214 , 119.5932,  -99.3005 ])))
+    # sleep(10)
     for i in range(num_test):
         print(i)
         base = fk(deg2rad(non_q[i]))
-        sleep(2)
+        sleep(1)
         base = fk(deg2rad(opt_q[i]))
-        sleep(2)
+        sleep(1)
         

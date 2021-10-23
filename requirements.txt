@@ -1,0 +1,6 @@
+dill
+sympy
+matplotlib
+openpyxl
+pandas
+tensorflow

@@ -39,7 +39,7 @@ class OptimalIK:
         self.accuracy      = accuracy
         self.max_iteration = max_iteration
         self.c         = np.array([0.01, 0.01, 0.01, 0.01, 0.01]) #Tikhonov # 0.1
-        self.F         = np.array([6.0, 6.0, -40.0, 0.0, 0.0, 0.0])
+        self.F         = np.array([-6.0, -6.0, 40.0, 0.0, 0.0, 0.0])
         self.init_q    = np.array([0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0]) # avoid singurality
         # self.K         = np.array([[1.1], [1.1], [1.1], [0.1], [0.5], [1.1], [0]]) # avoid singurality
         self.K_  = 1.0
@@ -219,7 +219,7 @@ class OptimalIK:
             dy.append(d_xyz[1])
             dz.append(0.5*(d_xyz[0]*d_xyz[0]+d_xyz[1]*d_xyz[1]))
         pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos, 'dx':dx, 'dy':dy, 'dz':dz}, index=index)
-        pos_record.to_excel(self.root+'/data/opt_data.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
+        pos_record.to_excel(self.root+'/data/opt_data_40.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
 
 if __name__ == "__main__":
     # Length of Links in meters

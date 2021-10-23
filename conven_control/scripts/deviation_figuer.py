@@ -27,9 +27,9 @@ def stiffness_figure(opt_file, nonopt_file):
     fig, ax = plt.subplots()
     plt.setp(ax.spines.values(), linewidth=1.7)
     index = np.arange(num_posture)
-    width =0.27
+    width = 0.27
 
-    ax.set_title("Non optimized vs optimized deviation", fontsize=17)
+    ax.set_title("Cartesian Deviation by External Force", fontsize=17)
     ax.set_xlabel('Posture'  , fontsize = 16)
     ax.set_ylabel('Deviation', fontsize = 16)
 
@@ -48,10 +48,12 @@ def stiffness_figure(opt_file, nonopt_file):
     rect1 = ax.bar(index+1, deviation_data[0], width, color = 'r' )
     rect2 = ax.bar(index+1+width, deviation_data[1], width, color = 'b' )
     
+    ax.set_axisbelow(True)
     ax.grid(color='#A2A6AB', axis='y')
+
     ax.legend( (rect1[0], rect2[0]), ('Non_optimized', 'optimized') )
     plt.show()
 
 if __name__ == "__main__":
-    filename = ["opt_data.xlsx", "ros_data.xlsx"]
+    filename = ["opt_data_40.xlsx", "ros_data_40.xlsx"]
     stiffness_figure(filename[0], filename[1])

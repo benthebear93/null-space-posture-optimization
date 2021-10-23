@@ -44,7 +44,7 @@ def deviation(q):
     q = np.append(q, 0)
     Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49]))
     Ktheta_inv = np.linalg.inv(Ktheta)
-    F      = np.array([6.0, 6.0, -40.0, 0.0, 0.0, 0.0])
+    F      = np.array([-6.0, -6.0, 40.0, 0.0, 0.0, 0.0])
     R = fk(q)[:3, :-1] # Rotation matrix
 
     T = find_T(R)
@@ -109,5 +109,5 @@ if __name__=="__main__":
     # # print("non opt:", dxyz)
     root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
 
-    cal_dev(root+'/data/ros_data.xlsx')
+    cal_dev(root+'/data/ros_data_40.xlsx')
     # cal_dev(root+'/data/optimized_result_fast_test.xlsx')
