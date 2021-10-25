@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import os
 
+def moving_average(a, n) :
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n
+
 def plot_figure(x_data, y_data, name, xlabel, ylabel):
     fig, ax = plt.subplots()
     plt.setp(ax.spines.values(), linewidth=1.7)
@@ -58,9 +63,12 @@ class FRF:
             self.Amp = np.array(self.df.loc[4][3:])
             self.real = np.array(self.df.loc[2][3:])
             self.imag = np.array(self.df.loc[3][3:])  
+
         W = self.Freq*2*np.pi
         self.dis = self.Amp/(W**2)
         stiff = 1/self.dis
+        self.avg_Amp = moving_average(self.Amp, 10)
+        self.avg_dis = moving_average(self.dis, 10)
         self.max = max(stiff)
         self.index = self.Freq[np.argmax(stiff)]
         real_dis = self.real/(W**2)
@@ -150,7 +158,7 @@ def convert_to_stiffness(filename, axis):
 
 def compare_compliance(filename, axis):
     file_path = os.getcwd()
-    file_path = file_path + "/test3"
+    file_path = file_path + "/test2"
     print("file path :", file_path)
     non_opt_max_list =[]
     opt_max_list =[]
@@ -161,6 +169,12 @@ def compare_compliance(filename, axis):
         opt = FRF(file_path + filename[i+1])
         non_opt.readExcel(axis)
         opt.readExcel(axis)
+        print("max: ", non_opt.max)
+        if opt.max >= non_opt.max:
+            print("optimized_number: ", optimized_number)
+            optimized_number+=1
+        non_opt_max_list.append(non_opt.max)
+        opt_max_list.append(opt.max)
 
         fig, ax = plt.subplots()
         plt.setp(ax.spines.values(), linewidth=1.7)
@@ -181,9 +195,13 @@ def compare_compliance(filename, axis):
 
         ax.tick_params(axis="y", direction="in", which='major', labelsize=13, width=2)
         ax.tick_params(axis="y", direction="in", which='minor', labelsize=13)
-
-        ax.plot(non_opt.Freq, non_opt.Amp, label='Non optimized')
-        ax.plot(opt.Freq, opt.Amp, label='optimized')
+        # ax.set_xlim(xmin=0, xmax=200)
+        # ax.set_ylim(ymin=0, ymax=0.0001)
+        print(len(non_opt.avg_dis))
+        print(len(non_opt.Freq)) 
+        size_set = len(non_opt.avg_dis)
+        ax.plot(non_opt.Freq[:size_set], non_opt.avg_Amp, label='Non optimized') #1024 - avg_size
+        ax.plot(opt.Freq[:size_set], opt.avg_Amp, label='optimized')
         ax.grid()
         plt.legend(loc='upper right', ncol=1)
         plt.show()
@@ -218,7 +236,7 @@ if __name__ == "__main__":
     filename_y.append(non_opt)
     filename_y.append(opt)
 
-    #non_y, opt_y = convert_to_stiffness(filename_y, "y")
+    ##non_y, opt_y = convert_to_stiffness(filename_y, "y")
     compare_compliance(filename_y, "y")
     filename_x = []
 

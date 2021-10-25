@@ -15,7 +15,7 @@ import dill
 
 def posture_read():
 
-    df = pd.read_excel('../data/random_position_quat.xlsx', header=None, names=None, index_col=None)
+    df = pd.read_excel('../data/random_curve_pos.xlsx', header=None, names=None, index_col=None)
     num_test = df.shape[0]
 
     overall_posval =[]
@@ -42,7 +42,7 @@ class OptimalIK:
         self.init_q    = np.array([0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0]) # avoid singurality
         # self.K         = np.array([[1.1], [1.1], [1.1], [0.1], [0.5], [1.1], [0]]) # avoid singurality
         self.K_  = 1.0
-        self.Kn_ = 0.001 # 0.001
+        self.Kn_ = 0.0001 # 0.001
     # def external_force(self): 
     #     '''
     #     External force 
@@ -214,14 +214,19 @@ class OptimalIK:
             dy.append(d_xyz[1])
             dz.append(0.5*(d_xyz[0]*d_xyz[0]+d_xyz[1]*d_xyz[1]))
         pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos, 'dx':dx, 'dy':dy, 'dz':dz}, index=index)
-        pos_record.to_excel(self.root+'/data/opt_data.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
+        pos_record.to_excel(self.root+'/data/opt_data_curved.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
 
 if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi
     pi_sym = sym.pi
-    PosPlane = OptimalIK(0.5, 0.001, 50000)
+    PosPlane = OptimalIK(0.01, 0.001, 50000)
     # test = np.array([0.361652, 1.35713, 0.69029, 4.3405, 0.95651, 2.16569, 0]))
     # PosPlane.fk(test)
     # start = time.time()
     PosPlane.get_cnfs_null(method_fun=PosPlane.null_space_method)
+
+
+
+# [ 0.7239 -0.0505  0.1998 -0.0048  0.7477  0.9423]  
+# ans :  [-30.7638 117.4474 -89.9488 -66.9955 -47.3993 141.0191  38.73  ]

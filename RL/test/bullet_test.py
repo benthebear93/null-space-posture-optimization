@@ -36,7 +36,7 @@ def fk(jointpos):
     return ee_pos
 
 def posture_read(filename):
-    root = '/home/benlee/Desktop/git/null-space-posture-optimization/conven_control/' #os.getcwd()
+    root = '/home/benlee/Desktop/git/null-space-posture-optimization/conven_control/data/' #os.getcwd()
     print("reading posture data...")
     df = pd.read_excel(root+filename, header=None, names=None, index_col=None)
     # loc start at 1 , 1~7 for joint values
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     joints, controlJoints = utils_tx90.setup_tx90(p, robotID) #get joints and controllable joints
     joint_init = [deg2rad(0), deg2rad(0), deg2rad(90), deg2rad(0), deg2rad(0), deg2rad(0)]
-    filename = ['non_optimized_result.xlsx', 'optimized_result.xlsx']
+    filename = ['ros_non_optimized_curved.xlsx', 'opt_data_curved.xlsx']
     non_q = posture_read(filename[0])
     opt_q = posture_read(filename[1])
     num_test = len(non_q)

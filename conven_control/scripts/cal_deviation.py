@@ -109,5 +109,5 @@ if __name__=="__main__":
     # # print("non opt:", dxyz)
     root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
 
-    cal_dev(root+'/data/ros_data_40.xlsx')
+    cal_dev(root+'/data/ros_non_optimized_curved.xlsx')
     # cal_dev(root+'/data/optimized_result_fast_test.xlsx')
