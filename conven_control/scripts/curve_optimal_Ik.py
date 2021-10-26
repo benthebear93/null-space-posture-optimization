@@ -3,10 +3,9 @@ import numpy as np
 from numpy.lib.function_base import append
 import pandas as pd
 import sympy as sym
-from pathlib import Path
-
 sym.init_printing()
 
+from pathlib import Path
 import matplotlib.pyplot as plt
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
 
@@ -14,7 +13,6 @@ from spatialmath import *
 import dill
 
 def posture_read():
-
     df = pd.read_excel('../data/random_curve_pos.xlsx', header=None, names=None, index_col=None)
     num_test = df.shape[0]
 
@@ -26,7 +24,7 @@ def posture_read():
             pos_val.append(a)
         overall_posval.append(pos_val)
         pos_val = []
-    # print(overall_posval)
+
     return overall_posval
 
 
@@ -43,29 +41,20 @@ class OptimalIK:
         # self.K         = np.array([[1.1], [1.1], [1.1], [0.1], [0.5], [1.1], [0]]) # avoid singurality
         self.K_  = 1.0
         self.Kn_ = 0.0001 # 0.001
-    # def external_force(self): 
-    #     '''
-    #     External force 
-    #     Output : Fx, Fy, Fz, Mx, My, Mz 
-    #     shape  :(6x1)
-    #     '''
-    #     F = np.array([[3.0], [3.0], [-20.0], [0.0], [0.0], [0.0]])
-    #     return F 
 
-    def FK(self, joint_params):
+    def fk(self, joint_params):
         '''
         Joint variables consisting of 7 parameters
         ''' 
-
         joint_params = np.asarray(joint_params, dtype=float)
         q1, q2, q3, q4, q5, q6, q7 = joint_params
         dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
         dh_param2 = np.array([0, 0.425, 0])
-        dh_param3 = np.array([0.05, 0, pi/2])
+        dh_param3 = np.array([0.0534, 0, pi/2])
         dh_param4 = np.array([0.425, 0, -pi/2])
         dh_param5 = np.array([0, 0, pi/2])
         dh_param6 = np.array([0.1, 0, 0])
-        dh_param7 = np.array([0.1027, 0.1911, 0])
+        dh_param7 = np.array([0.1031, 0.17298, 0])
 
         T12 = Homgm(dh_param1, q1, offset=0)
         T23 = Homgm(dh_param2, q2, offset=-pi/2)
@@ -78,10 +67,6 @@ class OptimalIK:
         TF = T12@T23@T34@T45@T56@T67@T7E
         p = TF[:3,-1]
         R = TF[:3,:-1] # Rotation matrix
-        # rpy = euler_from_rotation(R)
-        # p[3] = rpy[0]
-        # p[4] = rpy[1]
-        # p[5] = rpy[2]
         return TF
     
     def Joint_limit_check(self, q):
@@ -120,26 +105,26 @@ class OptimalIK:
 
         return q
     
-    def is_success(self, error):
-        
+    def is_success(self, error): 
         accuracy = self.accuracy
-        if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < 0.001 and abs(error[4]) < 0.001: 
+        if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < accuracy and abs(error[4]) < accuracy: 
             return True
 
-    def null_space_method(self,pos_num, q0, p_goal):
+    def null_space_method(self, pos_num, q0, p_goal):
         '''
         Null space projection method
         '''
-        max_iteration=500000
+        max_iteration = 500000
         Ktheta_inv = np.linalg.inv(self.Ktheta)
+
         q = [p_goal[3],p_goal[4],p_goal[5],p_goal[6]]
         goal_R = quaternion_matrix(p_goal[3:7])
-
         #goal_R = rotation_from_euler(p_goal[3:6])
+
         q_n0 = q0
 
-        p = self.FK(q_n0)[:3,-1] # position 
-        R = self.FK(q_n0)[:3, :-1] # Rotation matrix
+        p = self.fk(q_n0)[:3,-1] # position 
+        R = self.fk(q_n0)[:3, :-1] # Rotation matrix
 
         p_goal[3] = goal_R[2][0]
         p_goal[4] = goal_R[2][1]
@@ -157,12 +142,13 @@ class OptimalIK:
         q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
         while True:
             if self.is_success(t_dot):
+                print("pos ", p)
                 break
             q_n0 = self.Joint_limit_check(q_n0) 
             q_n0 = q_n0 + (δt * q_dot) 
 
-            p = self.FK(q_n0)[:3,-1]
-            R = self.FK(q_n0)[:3,:-1] # Rotation matrix
+            p = self.fk(q_n0)[:3,-1]
+            R = self.fk(q_n0)[:3,:-1] # Rotation matrix
             p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0] ]) #shape (5,1) = [x, y, z R31, R32, R21]
             
             T = find_T(R)
@@ -182,7 +168,7 @@ class OptimalIK:
             if i % 100 ==0:
                 print(pos_num, i, " t_dot: ", t_dot.T)
 
-            q_dot = self.K_*psd_J @ t_dot -self.Kn_*(np.eye(7) - (psd_J @ J_na))@gH # 6x5 5x1    - (6x6-6x5 5x6) 7x1
+            q_dot = self.K_*psd_J @ t_dot - self.Kn_*(np.eye(7) - (psd_J @ J_na))@gH # 6x5 5x1    - (6x6-6x5 5x6) 7x1
 
             i+=1
             if (i > max_iteration):
@@ -190,9 +176,9 @@ class OptimalIK:
                 break
 
         rpy = euler_from_rotation(R)
-        p[3] = rpy[0]
-        p[4] = rpy[1]
-        p[5] = rpy[2]
+        p[3] = np.rad2deg(rpy[0])
+        p[4] = np.rad2deg(rpy[1])
+        p[5] = np.rad2deg(rpy[2])
         return q_n0, p, dxyz
 
     def get_cnfs_null(self, method_fun, kwargs=dict()):
@@ -221,12 +207,9 @@ if __name__ == "__main__":
     pi = np.pi
     pi_sym = sym.pi
     PosPlane = OptimalIK(0.01, 0.001, 50000)
+    # q1 = np.array([-30.7638, 117.4474, -89.9488, -66.9955, -47.3993, 141.0191, 0])
+    # q1 = np.deg2rad(q1)
+    # PosPlane.fk(q1)
     # test = np.array([0.361652, 1.35713, 0.69029, 4.3405, 0.95651, 2.16569, 0]))
     # PosPlane.fk(test)
-    # start = time.time()
     PosPlane.get_cnfs_null(method_fun=PosPlane.null_space_method)
-
-
-
-# [ 0.7239 -0.0505  0.1998 -0.0048  0.7477  0.9423]  
-# ans :  [-30.7638 117.4474 -89.9488 -66.9955 -47.3993 141.0191  38.73  ]

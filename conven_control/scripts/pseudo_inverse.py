@@ -73,11 +73,11 @@ def FK(joint_params):
     q1, q2, q3, q4, q5, q6, q7 = joint_params
     dh_param1 = np.array([0, 0.05, -pi/2]) # d a alpah
     dh_param2 = np.array([0, 0.425, 0])
-    dh_param3 = np.array([0.05, 0, pi/2])
+    dh_param3 = np.array([0.0534, 0, pi/2])
     dh_param4 = np.array([0.425, 0, -pi/2])
     dh_param5 = np.array([0, 0, pi/2])
     dh_param6 = np.array([0.1, 0, 0])
-    dh_param7 = np.array([0.1027, 0.1911, 0])
+    dh_param7 = np.array([0.1031, 0.17298, 0])
 
     T12 = Homgm(dh_param1, q1, offset=0)
     T23 = Homgm(dh_param2, q2, offset=-pi/2)
@@ -88,16 +88,21 @@ def FK(joint_params):
     T7E = Homgm(dh_param7, 0, offset=0)
 
     TF = T12@T23@T34@T45@T56@T67@T7E
-
+    p = TF[:3,-1]
+    # print(p)
     return TF
 
-def simple_pseudo(pos_num, q0, p_goal, time_step=1.0, max_iteration=500000, accuracy=0.001):
+def simple_pseudo(pos_num, q0, p_goal, time_step=0.01, max_iteration=500000, accuracy=0.001):
 
     Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49]))
     Ktheta_inv = np.linalg.inv(Ktheta)
     F      = np.array([0.0, 0.0, 40.0, 0.0, 0.0, 0.0])
     print(p_goal)
     goal_R = quaternion_matrix(p_goal[3:7])
+    euler = euler_from_rotation(goal_R)
+    goal_R = rotation_from_euler(euler)
+
+    print("goal euler: ", euler)
     print("Goal R: ", goal_R)
     # Setting initial variables
     q_n0 = q0
@@ -108,6 +113,7 @@ def simple_pseudo(pos_num, q0, p_goal, time_step=1.0, max_iteration=500000, accu
     p_goal[3] = goal_R[2][0]
     p_goal[4] = goal_R[2][1]
     p_goal[5] = goal_R[1][0] # p_goal[3,4,5] = R31, R32, R21
+    print(p_goal[3], p_goal[4], p_goal[5])
     p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
 
     t_dot = p_goal[:6]  - p
@@ -116,7 +122,7 @@ def simple_pseudo(pos_num, q0, p_goal, time_step=1.0, max_iteration=500000, accu
 
     start_time = time.time()
     J_func    = dill.load(open(root+'/param_save/J_func_simp', "rb"))
-    print("start runnign")
+    print("start runnign\n")
     q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
     while True:
         if is_success(t_dot):
@@ -151,11 +157,13 @@ def simple_pseudo(pos_num, q0, p_goal, time_step=1.0, max_iteration=500000, accu
             print("No convergence")
             break
     print("R : ", R)
+    print("    ")
     rpy = euler_from_rotation(R)
-    print("rpy angs : ", np.rad2deg(rpy))
-    p[3] = rpy[0]
-    p[4] = rpy[1]
-    p[5] = rpy[2]
+    #print("ans quat : ",quaternion_matrix(R))
+    #print("rpy angs : ", np.rad2deg(rpy))
+    p[3] = np.rad2deg(rpy[0])
+    p[4] = np.rad2deg(rpy[1])
+    p[5] = np.rad2deg(rpy[2])
     return q_n0, p, dxyz
 
 def get_cnfs_null(method_fun, q0, kwargs=dict()):
@@ -167,6 +175,7 @@ def get_cnfs_null(method_fun, q0, kwargs=dict()):
     for i in range(len(overallpos)):
         q, p, d_xyz = method_fun(i, q0, np.array(overallpos[i]), **kwargs)
         print(i, " pos", p, "\n ans : ", np.rad2deg(q))
+        print("  ")
         index.append(i)
         J1.append(q[0])
         J2.append(q[1])
@@ -185,4 +194,7 @@ if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi
     pi_sym = sym.pi
+    # q1 = np.array([0, 0, 90, 0, 0, 0, 0])
+    # q1 = np.deg2rad(q1)
+    # FK(q1)
     get_cnfs_null(method_fun=simple_pseudo, q0=np.deg2rad([10 ,10, 10, 10, 10, 10, 0]))
