@@ -20,7 +20,7 @@ def posture_read():
     overall_posval =[]
     pos_val = []
     for i in range(0, num_test):
-        for j in range(0, 7):
+        for j in range(0, 6):
             a = df.iloc[i][j]
             pos_val.append(a)
         overall_posval.append(pos_val)
@@ -29,7 +29,7 @@ def posture_read():
 
 def is_success(error):
     accuracy = 0.001
-    if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < 0.0001 and abs(error[4]) < 0.0001 and abs(error[5]) < 0.0001: 
+    if abs(error[0]) < 0.0005 and abs(error[1]) < 0.0005 and abs(error[2]) < 0.0005 and abs(error[3]) < 0.0001 and abs(error[4]) < 0.0001 and abs(error[5]) < 0.0001: 
         return True
 
 def Joint_limit_check(q):
@@ -92,36 +92,40 @@ def FK(joint_params):
     # print(p)
     return TF
 
-def simple_pseudo(pos_num, q0, p_goal, time_step=0.01, max_iteration=500000, accuracy=0.001):
+def simple_pseudo(pos_num, q0, p_goal, time_step=0.5, max_iteration=500000, accuracy=0.001):
 
     Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49]))
     Ktheta_inv = np.linalg.inv(Ktheta)
     F      = np.array([0.0, 0.0, 40.0, 0.0, 0.0, 0.0])
-    print(p_goal)
-    goal_R = quaternion_matrix(p_goal[3:7])
-    euler = euler_from_rotation(goal_R)
-    goal_R = rotation_from_euler(euler)
 
-    print("goal euler: ", euler)
-    print("Goal R: ", goal_R)
+    #goal_R = quaternion_matrix(p_goal[3:6])
+    # euler = euler_from_rotation(goal_R) # roll pitch yaw
+    goal_R = rotation_from_euler(np.deg2rad(p_goal[3:6]))
+    # g_r31 = -sin(p_goal[4])
+    # g_r32 = cos(p_goal[4])*sin(p_goal[3])
+    # g_r21 = sin(p_goal[5])*cos(p_goal[4])
+    #print("goal euler: ", np.rad2deg(euler))
+    # print("Goal R: ", goal_R)
+    # print(g_r31, g_r32, g_r21)
     # Setting initial variables
     q_n0 = q0
 
     p = FK(q_n0)[:3,-1]
     R = FK(q_n0)[:3, :-1] # Rotation matrix
     
-    p_goal[3] = goal_R[2][0]
-    p_goal[4] = goal_R[2][1]
+    p_goal[3] = goal_R[2][1]
+    p_goal[4] = goal_R[2][0]
     p_goal[5] = goal_R[1][0] # p_goal[3,4,5] = R31, R32, R21
     print(p_goal[3], p_goal[4], p_goal[5])
-    p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
+    p = np.array([ p[0], p[1], p[2], R[2][1], R[2][0], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
 
     t_dot = p_goal[:6]  - p
     δt = time_step
     i=0
 
     start_time = time.time()
-    J_func    = dill.load(open(root+'/param_save/J_func_simp', "rb"))
+    J_func    = dill.load(open(root+'/scripts/J_func_simp', "rb"))
+    print(root+'/scripts/J_func_simp')
     print("start runnign\n")
     q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
     while True:
@@ -133,7 +137,8 @@ def simple_pseudo(pos_num, q0, p_goal, time_step=0.01, max_iteration=500000, acc
 
         p = FK(q_n0)[:3,-1]
         R = FK(q_n0)[:3,:-1] # Rotation matrix
-        p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
+        r31, r32, r21 = wrpy(q_n0)
+        p = np.array([ p[0], p[1], p[2], R[2][1], R[2][0], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
 
         T = find_T(R)
         invT = np.linalg.inv(T)
@@ -157,13 +162,15 @@ def simple_pseudo(pos_num, q0, p_goal, time_step=0.01, max_iteration=500000, acc
             print("No convergence")
             break
     print("R : ", R)
+    print("Goal R: ", goal_R)
     print("    ")
     rpy = euler_from_rotation(R)
     #print("ans quat : ",quaternion_matrix(R))
     #print("rpy angs : ", np.rad2deg(rpy))
-    p[3] = np.rad2deg(rpy[0])
+    p[3] = np.rad2deg(rpy[0]) # pitch roll yaw
     p[4] = np.rad2deg(rpy[1])
     p[5] = np.rad2deg(rpy[2])
+    print(p[3], p[4], p[5])
     return q_n0, p, dxyz
 
 def get_cnfs_null(method_fun, q0, kwargs=dict()):

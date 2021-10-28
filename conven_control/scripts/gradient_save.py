@@ -70,7 +70,7 @@ def jacobian_sym():
     #         [0, 0, 1, 0.1027],
     #         [0,0,0,1]])
     TF = T12@T23@T34@T45@T56@T67#@T7E
-
+    print(TF)
     TF_Extend = T12@T23@T34@T45@T56@T67@T7E
 
     
@@ -84,8 +84,8 @@ def jacobian_sym():
     T    = T_d[0:3, -1]
     R_d  = T_d[0:3, :-1]
     R_j  = R_d @ R.T 
-    J_Extend   = T.row_insert(3, sym.Matrix([ R_j[2,1], R_j[0,2], R_j[1,0] ]))
-    J_n_Extend = T.row_insert(2, sym.Matrix([ R_j[2,1], R_j[0,2] ]))
+    J_Extend   = T.row_insert(3, sym.Matrix([ R_j[2,1], R_j[2,0], R_j[1,0] ]))
+    J_n_Extend = T.row_insert(2, sym.Matrix([ R_j[2,1], R_j[2,0] ]))
 
     for var in variables[:6]:
         print("calculating jacobian")
@@ -95,8 +95,8 @@ def jacobian_sym():
         R_d  = T_d[0:3, :-1] # Rotation diff 
         R_j  = R_d @ R.T     # Rotation jacobian
 
-        J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[0,2], R_j[1,0]])) # [T_d; R_d] # jacobian calcuation for target_f
-        J_null = T.row_insert(2, sym.Matrix([R_j[2,1], R_j[0,2]])) # null space control jacobian 
+        J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[2,0], R_j[1,0]])) # [T_d; R_d] # jacobian calcuation for target_f
+        J_null = T.row_insert(2, sym.Matrix([R_j[2,1], R_j[2,0]])) # null space control jacobian 
         jacobian = jacobian.col_insert(len(jacobian), J) # 6x1 translation + rotation diff 
         jacobian_null = jacobian_null.col_insert(len(jacobian_null), J_null) # 6x1 translation + rotation diff 
 
@@ -128,11 +128,11 @@ def jacobian_sym():
     print("  ")
     print("shape :", jacobian.shape, jacobian_null.shape, target_f.shape)
     print("  ")
-    with open(root+'../param_save/Jacobian.txt','wb') as f:
+    with open(root+'/Jacobian.txt','wb') as f:
         pickle.dump(jacobian,f)
-    with open(root+'../param_save/Jacobian_null.txt','wb') as f:
+    with open(root+'/Jacobian_null.txt','wb') as f:
         pickle.dump(jacobian_null,f)
-    with open(root+'../param_save/target_f.txt','wb') as f:
+    with open(root+'/target_f.txt','wb') as f:
         pickle.dump(target_f,f)
     return sym.lambdify([variables], jacobian_null, "numpy"), sym.lambdify([variables], target_f, "numpy") # Convert a SymPy expression into a function that allows for fast numeric evaluation.
 
@@ -143,11 +143,11 @@ if __name__ == "__main__":
     jacobian_null = sym.Matrix([])
     Hessian = sym.Matrix([])
     
-    with open(root+'../param_save/Jacobian.txt','rb') as f:
+    with open(root+'/Jacobian.txt','rb') as f:
         jacobian = pickle.load(f)
-    with open(root+'../param_save/target_f.txt','rb') as f:
+    with open(root+'/target_f.txt','rb') as f:
         target_f = pickle.load(f)
-    with open(root+'../param_save/Jacobian_null.txt','rb') as f:
+    with open(root+'/Jacobian_null.txt','rb') as f:
         jacobian_null = pickle.load(f)
 
     q1, q2, q3, q4, q5, q6, q7 = sym.symbols("q_1 q_2 q_3 q_4 q_5 q_6 q_7", real=True) 
@@ -157,6 +157,6 @@ if __name__ == "__main__":
     H_func = sym.lambdify([variables], target_f, modules='numpy')
 
     dill.settings['recurse'] = True
-    dill.dump(J_func, open(root+'..\param_save\J_func_simp', "wb"))
-    dill.dump(Jn_func, open(root+'..\param_save\Jn_func_simp', "wb"))
-    dill.dump(H_func, open(root+'..\param_save\H_func_simp', "wb"))
+    dill.dump(J_func, open(root+'\J_func_simp', "wb"))
+    dill.dump(Jn_func, open(root+'\Jn_func_simp', "wb"))
+    dill.dump(H_func, open(root+'\H_func_simp', "wb"))

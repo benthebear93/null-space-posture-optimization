@@ -18,35 +18,7 @@ _AXES2TUPLE = {
     'rxzx': (0, 1, 1, 1), 'rxzy': (1, 0, 0, 1), 'ryzy': (1, 0, 1, 1),
     'rzxy': (1, 1, 0, 1), 'ryxy': (1, 1, 1, 1), 'ryxz': (2, 0, 0, 1),
     'rzxz': (2, 0, 1, 1), 'rxyz': (2, 1, 0, 1), 'rzyz': (2, 1, 1, 1)}
-
-
-def wrpy(q):
-  q1 = q[0]
-  q2 = q[1]
-  q3 = q[2]
-  q4 = q[3]
-  q5 = q[4]
-  q6 = q[5]
-  c1 = cos(q1)
-  c2 = cos(q2)
-  c3 = cos(q3)
-  c4 = cos(q4)
-  c5 = cos(q5)
-  c6 = cos(q6)
-  s1 = sin(q1)
-  s2 = sin(q2)
-  s3 = sin(q3)
-  s4 = sin(q4)
-  s5 = sin(q5)
-  s6 = sin(q6) 
-  c23 = cos(q2+q3)
-  s23 = sin(q2+q3)
-
-  r31 = (-s23)*c4*s5+(c23)*c5
-  r32 = -((-s23)*c4*c5-(c23)*s5)*s6-(-s23)*s4*c6
-  r21 = ((s1*c23)*c4+c1*s4)*s5+(s1*s23)*c5
-  return r31, r32, r21
-  
+    
 def quaternion_from_euler(ai, aj, ak, axes='sxyz'):
     """Return quaternion from Euler angles and axis sequence.
     ai, aj, ak : Euler's roll, pitch and yaw angles
@@ -84,7 +56,7 @@ def quaternion_from_euler(ai, aj, ak, axes='sxyz'):
     sc = si*ck
     ss = si*sk
 
-    quaternion = numpy.empty((4, ), dtype=numpy.float64)
+    quaternion = np.empty((4, ), dtype=np.float64)
     if repetition:
         quaternion[i] = cj*(cs + sc)
         quaternion[j] = sj*(cc + ss)
@@ -100,6 +72,7 @@ def quaternion_from_euler(ai, aj, ak, axes='sxyz'):
 
     return quaternion
 
+
 def euler_from_matrix(matrix, axes='sxyz'):
     """Return Euler angles from rotation matrix for specified axis sequence.
     axes : One of 24 axis sequences as string or encoded tuple
@@ -109,7 +82,7 @@ def euler_from_matrix(matrix, axes='sxyz'):
     >>> R1 = euler_matrix(al, be, ga, 'syxz')
     >>> numpy.allclose(R0, R1)
     True
-    >>> angles = (4.0*pi) * (numpy.random.random(3) - 0.5)
+    >>> angles = (4.0*math.pi) * (numpy.random.random(3) - 0.5)
     >>> for axes in _AXES2TUPLE.keys():
     ...    R0 = euler_matrix(axes=axes, *angles)
     ...    R1 = euler_matrix(axes=axes, *euler_from_matrix(R0, axes))
@@ -161,7 +134,6 @@ def quaternion_matrix(quaternion):
     True
     '''
     _EPS = np.finfo(float).eps * 4.0
-    print(quaternion)
     q = np.array(quaternion[:4], dtype=np.float64, copy=True)
     nq = np.dot(q, q)
     if nq < _EPS:

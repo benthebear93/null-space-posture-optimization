@@ -40,7 +40,7 @@ class OptimalIK:
         self.init_q    = np.array([0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0]) # avoid singurality
         # self.K         = np.array([[1.1], [1.1], [1.1], [0.1], [0.5], [1.1], [0]]) # avoid singurality
         self.K_  = 1.0
-        self.Kn_ = 0.0001 # 0.001
+        self.Kn_ = 0.1 # 0.001
 
     def fk(self, joint_params):
         '''
@@ -67,6 +67,9 @@ class OptimalIK:
         TF = T12@T23@T34@T45@T56@T67@T7E
         p = TF[:3,-1]
         R = TF[:3,:-1] # Rotation matrix
+        #print("pos: ", p)
+        euler = euler_from_rotation(R)
+        print("goal euler: ", np.rad2deg(euler))
         return TF
     
     def Joint_limit_check(self, q):
@@ -107,7 +110,7 @@ class OptimalIK:
     
     def is_success(self, error): 
         accuracy = self.accuracy
-        if abs(error[0]) < accuracy and abs(error[1]) < accuracy and abs(error[2]) < accuracy and abs(error[3]) < accuracy and abs(error[4]) < accuracy: 
+        if abs(error[0]) < 0.0005 and abs(error[1]) < 0.0001 and abs(error[2]) < 0.0001 and abs(error[3]) < accuracy and abs(error[4]) < accuracy: 
             return True
 
     def null_space_method(self, pos_num, q0, p_goal):
@@ -117,19 +120,24 @@ class OptimalIK:
         max_iteration = 500000
         Ktheta_inv = np.linalg.inv(self.Ktheta)
 
-        q = [p_goal[3],p_goal[4],p_goal[5],p_goal[6]]
+        #q = [p_goal[3],p_goal[4],p_goal[5],p_goal[6]]
         goal_R = quaternion_matrix(p_goal[3:7])
-        #goal_R = rotation_from_euler(p_goal[3:6])
-
+        euler = euler_from_rotation(goal_R)
+        goal_R = rotation_from_euler(euler)
+        print("  ")
+        print("goal euler: ", euler)
+        print("Goal R: ", goal_R)
+        print("  ")
         q_n0 = q0
 
         p = self.fk(q_n0)[:3,-1] # position 
         R = self.fk(q_n0)[:3, :-1] # Rotation matrix
 
-        p_goal[3] = goal_R[2][0]
-        p_goal[4] = goal_R[2][1]
-        p_goal[5] = goal_R[1][0] # Goal position = [x, y, z R31, R32, R21]
-        p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0] ]) #shape (6,1) = [x, y, z R31, R32, R21]
+        p_goal[3] = goal_R[2][1] # 31 pitch 
+        p_goal[4] = goal_R[2][0] # 32-33 roll 
+        p_goal[5] = goal_R[1][0] # 21 p_goal[3,4,5] = R31, R32, R21 yaw
+        print(p_goal[3], p_goal[4], p_goal[5])
+        p = np.array([ p[0], p[1], p[2], R[2][1], R[2][0], R[1][0]]) # shape miss match (6,1) # x,y,z R31, R32
         t_dot = p_goal[:5] - p[:5] # redundancy Rz remove (5,1)
         δt = self.time_step
         c = self.c
@@ -149,7 +157,7 @@ class OptimalIK:
 
             p = self.fk(q_n0)[:3,-1]
             R = self.fk(q_n0)[:3,:-1] # Rotation matrix
-            p = np.array([ p[0], p[1], p[2], R[2][0], R[2][1], R[1][0] ]) #shape (5,1) = [x, y, z R31, R32, R21]
+            p = np.array([ p[0], p[1], p[2], R[2][1], R[2][0], R[1][0]]) #shape (5,1) = [x, y, z R31, R32, R21]
             
             T = find_T(R)
             invT = np.linalg.inv(T)
@@ -166,6 +174,7 @@ class OptimalIK:
             J_temp =J[:,:6]@Ktheta_inv@J[:,:6].T
             dxyz = J_temp@self.F
             if i % 100 ==0:
+                print("  ")
                 print(pos_num, i, " t_dot: ", t_dot.T)
 
             q_dot = self.K_*psd_J @ t_dot - self.Kn_*(np.eye(7) - (psd_J @ J_na))@gH # 6x5 5x1    - (6x6-6x5 5x6) 7x1
@@ -174,11 +183,11 @@ class OptimalIK:
             if (i > max_iteration):
                 print("No convergence")
                 break
-
+        print("R : \n", R)
         rpy = euler_from_rotation(R)
-        p[3] = np.rad2deg(rpy[0])
-        p[4] = np.rad2deg(rpy[1])
-        p[5] = np.rad2deg(rpy[2])
+        p[3] = np.rad2deg(rpy[0]) # yaw
+        p[4] = np.rad2deg(rpy[1]) # pitch
+        p[5] = np.rad2deg(rpy[2]) # roll
         return q_n0, p, dxyz
 
     def get_cnfs_null(self, method_fun, kwargs=dict()):
@@ -187,7 +196,7 @@ class OptimalIK:
 
         for i in range(len(overallpos)):
             q, p, d_xyz = method_fun(i, self.init_q, np.array(overallpos[i]), **kwargs)
-            print("pos\n", i, p, " ans : ", np.rad2deg(q))
+            print("pos\n", i," : ", p, " ans : ", np.rad2deg(q))
             index.append(i)
             J1.append(q[0])
             J2.append(q[1])
@@ -206,10 +215,16 @@ if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi
     pi_sym = sym.pi
-    PosPlane = OptimalIK(0.01, 0.001, 50000)
-    # q1 = np.array([-30.7638, 117.4474, -89.9488, -66.9955, -47.3993, 141.0191, 0])
-    # q1 = np.deg2rad(q1)
-    # PosPlane.fk(q1)
-    # test = np.array([0.361652, 1.35713, 0.69029, 4.3405, 0.95651, 2.16569, 0]))
-    # PosPlane.fk(test)
-    PosPlane.get_cnfs_null(method_fun=PosPlane.null_space_method)
+    PosPlane = OptimalIK(0.5, 0.001, 50000)
+    q1 = np.array([5.07278192,  66.18588826,  59.85810729, -80.32352617, 62.41827459,  77.62662842, 0])
+    q1 = np.deg2rad(q1)
+    a = np.deg2rad([-122.4152, 42.8652, 179.8769])
+    print(a)
+    R = rotation_from_euler(a)
+    R = np.array([[-0.7324,  0.5764,  0.3624  ],
+    [ 0.0021,  0.5342, -0.8454],
+    [-0.6808, -0.6184, -0.3925]])
+    print("custom :", euler_from_rotation(R))
+    print("code: ", euler_from_matrix(R))
+    PosPlane.fk(q1)
+    # PosPlane.get_cnfs_null(method_fun=PosPlane.null_space_method)

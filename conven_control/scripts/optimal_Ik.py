@@ -198,23 +198,25 @@ class OptimalIK:
     def get_cnfs_null(self, method_fun, kwargs=dict()):
         overallpos = posture_read()
         J1, J2, J3, J4, J5, J6, index, pos, dx,dy,dz = ([] for i in range(11)) 
-
-        for i in range(len(overallpos)):
-            q, p, d_xyz = method_fun(i, self.init_q, np.array(overallpos[i]), **kwargs)
-            print("pos\n", i, p, " ans : ", np.rad2deg(q))
-            index.append(i)
-            J1.append(q[0])
-            J2.append(q[1])
-            J3.append(q[2])
-            J4.append(q[3])
-            J5.append(q[4])
-            J6.append(q[5])
-            pos.append(np.around(np.array(overallpos[i]), decimals=4))
-            dx.append(d_xyz[0])
-            dy.append(d_xyz[1])
-            dz.append(0.5*(d_xyz[0]*d_xyz[0]+d_xyz[1]*d_xyz[1]))
-        pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos, 'dx':dx, 'dy':dy, 'dz':dz}, index=index)
-        pos_record.to_excel(self.root+'/data/opt_data.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
+        p_goal = np.array([0.7238, -0.0505, 0.2, 0.002378, 0.930825, -0.00229, 0.365421])
+        q, p, d_xyz = method_fun(0, self.init_q, p_goal, **kwargs)
+        print("pos\n", 0, p, " ans : ", np.rad2deg(q))
+        # for i in range(len(overallpos)):
+        #     q, p, d_xyz = method_fun(i, self.init_q, np.array(overallpos[i]), **kwargs)
+        #     print("pos\n", i, p, " ans : ", np.rad2deg(q))
+        #     index.append(i)
+        #     J1.append(q[0])
+        #     J2.append(q[1])
+        #     J3.append(q[2])
+        #     J4.append(q[3])
+        #     J5.append(q[4])
+        #     J6.append(q[5])
+        #     pos.append(np.around(np.array(overallpos[i]), decimals=4))
+        #     dx.append(d_xyz[0])
+        #     dy.append(d_xyz[1])
+        #     dz.append(0.5*(d_xyz[0]*d_xyz[0]+d_xyz[1]*d_xyz[1]))
+        # pos_record = pd.DataFrame({'J1':np.rad2deg(J1), 'J2':np.rad2deg(J2), 'J3':np.rad2deg(J3), 'J4':np.rad2deg(J4), 'J5':np.rad2deg(J5), 'J6':np.rad2deg(J6), 'pos':pos, 'dx':dx, 'dy':dy, 'dz':dz}, index=index)
+        # pos_record.to_excel(self.root+'/data/opt_data.xlsx', sheet_name='Sheet2', float_format="%.3f", header=True)
 
 if __name__ == "__main__":
     # Length of Links in meters
