@@ -12,7 +12,7 @@ Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93 ,0.49])) # 3x3
 root = os.getcwd()
 
 def external_force(): 
-    F = np.array([[1.0], [1.0], [20.0], [0.0], [0.0], [0.0]])
+    F = np.array([[-6.0], [-6.0], [40.0], [0.0], [0.0], [0.0]])
     return F
 
 def FK(joint_params):
@@ -157,6 +157,6 @@ if __name__ == "__main__":
     H_func = sym.lambdify([variables], target_f, modules='numpy')
 
     dill.settings['recurse'] = True
-    dill.dump(J_func, open(root+'\J_func_simp', "wb"))
-    dill.dump(Jn_func, open(root+'\Jn_func_simp', "wb"))
-    dill.dump(H_func, open(root+'\H_func_simp', "wb"))
+    dill.dump(J_func, open(root+'/J_func_simp', "wb"))
+    dill.dump(Jn_func, open(root+'/Jn_func_simp', "wb"))
+    dill.dump(H_func, open(root+'/H_func_simp', "wb"))
