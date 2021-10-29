@@ -18,7 +18,7 @@ root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
 def posture_read():
     # load_wb = load_workbook("C:/Users/UNIST/Desktop/stiffness_estimation/test_z.xlsx", data_only=True)
     df = pd.read_excel(
-        "../data/random_curve_pos.xlsx", header=None, names=None, index_col=None
+        "../data/random_position_test_old.xlsx", header=None, names=None, index_col=None
     )
     testCount = df.shape[0]
 
@@ -40,9 +40,9 @@ def is_success(error):
         abs(error[0]) < 0.0005
         and abs(error[1]) < 0.0005
         and abs(error[2]) < 0.0005
-        and abs(error[3]) < 0.0001
-        and abs(error[4]) < 0.0001
-        and abs(error[5]) < 0.0001
+        and abs(error[3]) < 0.0005
+        and abs(error[4]) < 0.0005
+        and abs(error[5]) < 0.0005
     ):
         return True
 
@@ -115,7 +115,7 @@ def simple_pseudo(
 
     Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93, 0.49]))
     Ktheta_inv = np.linalg.inv(Ktheta)
-    F = np.array([0.0, 0.0, 40.0, 0.0, 0.0, 0.0])
+    F = np.array([-6.0, -6.0, 40.0, 0.0, 0.0, 0.0])
     goal_R = rotation_from_euler(np.deg2rad(p_goal[3:6]))
 
     q_n0 = q0
