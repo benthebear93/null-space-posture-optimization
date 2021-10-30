@@ -31,7 +31,7 @@ def fk(jointpos):
     p.stepSimulation()
     ee_state = p.getLinkState(robotID, eefID)
     ee_pos = np.array(ee_state[0])
-    print(eefID, ":", ee_pos)
+    # print(eefID, ":", ee_pos)
     # print(eefID, ":", ee_state[1])
     return ee_pos
 
@@ -73,27 +73,27 @@ if __name__ == "__main__":
 
     joints, controlJoints = utils_tx90.setup_tx90(p, robotID) #get joints and controllable joints
     joint_init = [deg2rad(0), deg2rad(0), deg2rad(90), deg2rad(0), deg2rad(0), deg2rad(0)]
-    # filename = ['ros_non_optimized_curved.xlsx', 'opt_data_curved.xlsx']
-    # non_q = posture_read(filename[0])
-    # opt_q = posture_read(filename[1])
-    # num_test = len(non_q)
-    while True:
-        base = fk(np.deg2rad(np.array([ 5.0809,   66.1729,   59.8964,   99.6127, -62.4856  , -102.2284])))
+    filename = ['ros_curve_v1.xlsx', 'opt_curve_v1.xlsx']
+    non_q = posture_read(filename[0])
+    opt_q = posture_read(filename[1])
+    num_test = len(non_q)
+    for i in range(num_test):
+        print("test pos :", i)
+        base = fk(deg2rad(non_q[i]))
         sleep(1)
-        base = fk(np.deg2rad(np.array([ 0.0186, 56.1443 , 73.1333, -77.1664 , 31.7921,  75.1067])))
-        sleep(3)
+        base = fk(deg2rad(opt_q[i]))
+        sleep(1)
 
-        base = fk(np.deg2rad(np.array([-4.4713 ,   52.6902,   77.2336 ,  120.8965, -12.4768, -124.7588])))
-        sleep(1)
-        base = fk(np.deg2rad(np.array([  0.2526 , 56.4472,  72.7631, -77.4118 , 32.9538 , 75.3699])))
-        sleep(3)
-    # for i in range(num_test):1
-    #     base = fk(deg2rad(non_q[i]))
+    # while True:
+    #     base = fk(np.deg2rad(np.array([-42.4644,   49.0494,  104.2851, -223.1151,  68.7505,  197.8403])))
     #     sleep(1)
-    #     print("non q: ", opt_q[i])
-    #     base = fk(deg2rad(opt_q[i]))
+    #     base = fk(np.deg2rad(np.array([ -35.0134 ,  47.5461,  108.424,   167.9444  , 65.3908 ,-175.6493])))
     #     sleep(1)
-        
+
+        # base = fk(np.deg2rad(np.array([-4.4713 ,   52.6902,   77.2336 ,  120.8965, -12.4768, -124.7588])))
+        # sleep(1)
+        # base = fk(np.deg2rad(np.array([  0.2526 , 56.4472,  72.7631, -77.4118 , 32.9538 , 75.3699])))
+        # sleep(3) 
 
 # [   0.7237   -0.0508   -0.2779  179.6617   59.1378 -139.8074] 
 #  [  0.7238  -0.0505  -0.278  179.8286  42.9159 122.4065] 

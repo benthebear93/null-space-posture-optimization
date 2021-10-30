@@ -19,7 +19,7 @@ from tx90 import *
 def posture_read():
 
     df = pd.read_excel(
-        "../data/random_position_test_old.xlsx", header=None, names=None, index_col=None
+        "../data/random_curve_pos.xlsx", header=None, names=None, index_col=None
     )
     num_test = df.shape[0]
 
@@ -45,7 +45,7 @@ class OptimalIK(Tx90):
         self.time_step = time_step
         self.accuracy = accuracy
         self.max_iteration = max_iteration
-        self.c = np.array([0.01, 0.01, 0.01, 0.01, 0.01])  # Tikhonov # 0.1
+        self.c = np.array([0.001, 0.001, 0.001, 0.001, 0.001])  # Tikhonov # 0.1
         self.F = np.array([-6.0, -6.0, 40.0, 0.0, 0.0, 0.0])
         self.init_q = np.array(
             [0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0]
@@ -59,19 +59,21 @@ class OptimalIK(Tx90):
         Ktheta_inv = np.linalg.inv(self.Ktheta)
 
         goal_R = rotation_from_euler(np.deg2rad(p_goal[3:6]))
-        print("Goal R: ", goal_R)
+        print("Goal R: ", goal_R[:3, :-1])
         q_n0 = q0
 
         p = self.fk(q_n0)[:3, -1]  # position
         R = self.fk(q_n0)[:3, :-1]  # Rotation matrix
+        
+
 
         p_goal[3] = goal_R[2][1]  # roll
         p_goal[4] = goal_R[2][0]  # pitch
-        p_goal[5] = goal_R[1][0]  # yaw
+        p_goal[5] = goal_R[0][0]  # yaw
         p_goal = np.array([p_goal[0], p_goal[1], p_goal[2], p_goal[4], p_goal[5], 0])
 
         p = np.array(
-            [p[0], p[1], p[2], R[2][0], R[1][0], 0]
+            [p[0], p[1], p[2], R[2][0], R[0][0], 0]
         )  # shape miss match (6,1) # x,y,z R31, R32
         t_dot = p_goal[:5] - p[:5]  # redundancy Rz remove (5,1)
 
@@ -94,7 +96,7 @@ class OptimalIK(Tx90):
             p = self.fk(q_n0)[:3, -1]
             R = self.fk(q_n0)[:3, :-1]  # Rotation matrix
             p = np.array(
-                [p[0], p[1], p[2], R[2][0], R[1][0], 0]
+                [p[0], p[1], p[2], R[2][0], R[0][0], 0]
             )  # shape (5,1) = [x, y, z R32, R31, R21]
 
             T = find_T(R)
@@ -131,6 +133,7 @@ class OptimalIK(Tx90):
         p[3] = np.rad2deg(rpy[0])  # yaw
         p[4] = np.rad2deg(rpy[1])  # pitch
         p[5] = np.rad2deg(rpy[2])  # roll
+        print(p[3], p[4], p[5])
         return q_n0, p, dxyz
 
     def get_cnfs_null(self, method_fun, kwargs=dict()):
@@ -167,7 +170,7 @@ class OptimalIK(Tx90):
             index=index,
         )
         pos_record.to_excel(
-            self.root + "/data/opt_data_v2.xlsx",
+            self.root + "/data/opt_curve_v1.xlsx",
             sheet_name="Sheet2",
             float_format="%.3f",
             header=True,
@@ -178,7 +181,7 @@ if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi
     pi_sym = sym.pi
-    PosPlane = OptimalIK(0.1, 0.001, 500000)
+    PosPlane = OptimalIK(0.5, 0.001, 500000)
     # test = np.array([0.361652, 1.35713, 0.69029, 4.3405, 0.95651, 2.16569, 0]))
     # PosPlane.fk(test)
     # start = time.time()

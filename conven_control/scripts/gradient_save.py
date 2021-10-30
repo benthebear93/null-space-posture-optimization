@@ -27,7 +27,7 @@ def FK(joint_params):
     dh_param4 = np.array([0.425, 0, -pi/2])
     dh_param5 = np.array([0, 0, pi/2])
     dh_param6 = np.array([0.1, 0, 0])
-    dh_param7 = np.array([0.1027, 0.1911, 0])
+    dh_param7 = np.array([0.1031, 0.17298, 0])
 
     T12 = Homgm(dh_param1, q1, offset=0)
     T23 = Homgm(dh_param2, q2, offset=-pi/2)
@@ -84,7 +84,7 @@ def jacobian_sym():
     T    = T_d[0:3, -1]
     R_d  = T_d[0:3, :-1]
     R_j  = R_d @ R.T 
-    J_Extend   = T.row_insert(3, sym.Matrix([ R_j[2,1], R_j[2,0], R_j[1,0] ]))
+    J_Extend   = T.row_insert(3, sym.Matrix([ R_j[2,1], R_j[2,0], R_j[0,0] ]))
     J_n_Extend = T.row_insert(2, sym.Matrix([ R_j[2,1], R_j[2,0] ]))
 
     for var in variables[:6]:
@@ -95,7 +95,7 @@ def jacobian_sym():
         R_d  = T_d[0:3, :-1] # Rotation diff 
         R_j  = R_d @ R.T     # Rotation jacobian
 
-        J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[2,0], R_j[1,0]])) # [T_d; R_d] # jacobian calcuation for target_f
+        J = T.row_insert(3, sym.Matrix([R_j[2,1], R_j[2,0], R_j[0,0]])) # [T_d; R_d] # jacobian calcuation for target_f
         J_null = T.row_insert(2, sym.Matrix([R_j[2,1], R_j[2,0]])) # null space control jacobian 
         jacobian = jacobian.col_insert(len(jacobian), J) # 6x1 translation + rotation diff 
         jacobian_null = jacobian_null.col_insert(len(jacobian_null), J_null) # 6x1 translation + rotation diff 

@@ -20,12 +20,12 @@ def posture_read():
     df = pd.read_excel(
         "../data/random_curve_pos.xlsx", header=None, names=None, index_col=None
     )
-    testCount = df.shape[0]
+    num_test = df.shape[0]
 
-    print("number of test: ", (testCount - 1) / 2)
+    print("number of test: ", (num_test - 1) / 2)
     overall_posval = []
     pos_val = []
-    for i in range(0, testCount):
+    for i in range(0, num_test):
         for j in range(0, 6):
             a = df.iloc[i][j]
             pos_val.append(a)
@@ -40,9 +40,9 @@ def is_success(error):
         abs(error[0]) < 0.0005
         and abs(error[1]) < 0.0005
         and abs(error[2]) < 0.0005
-        and abs(error[3]) < 0.001
-        and abs(error[4]) < 0.001
-        and abs(error[5]) < 0.001
+        and abs(error[3]) < 0.0001
+        and abs(error[4]) < 0.0001
+        and abs(error[5]) < 0.0001
     ):
         return True
 
@@ -110,25 +110,34 @@ def FK(joint_params):
 
 
 def simple_pseudo(
-    pos_num, q0, p_goal, time_step=0.1, max_iteration=500000, accuracy=0.001
+    pos_num, q0, p_goal, time_step=0.5, max_iteration=500000, accuracy=0.001
 ):
 
     Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93, 0.49]))
     Ktheta_inv = np.linalg.inv(Ktheta)
-    F = np.array([-6.0, -6.0, 40.0, 0.0, 0.0, 0.0])
-    goal_R = rotation_from_euler(np.deg2rad(p_goal[3:6]))
+    F = np.array([0.0, 0.0, 40.0, 0.0, 0.0, 0.0])
 
+    # goal_R = quaternion_matrix(p_goal[3:6])
+    # euler = euler_from_rotation(goal_R) # roll pitch yaw
+    goal_R = rotation_from_euler(np.deg2rad(p_goal[3:6]))
+    # g_r31 = -sin(p_goal[4])
+    # g_r32 = cos(p_goal[4])*sin(p_goal[3])
+    # g_r21 = sin(p_goal[5])*cos(p_goal[4])
+    # print("goal euler: ", np.rad2deg(euler))
+    # print("Goal R: ", goal_R)
+    # print(g_r31, g_r32, g_r21)
+    # Setting initial variables
     q_n0 = q0
 
     p = FK(q_n0)[:3, -1]
     R = FK(q_n0)[:3, :-1]  # Rotation matrix
 
-    p_goal[3] = goal_R[2][1] # roll
-    p_goal[4] = goal_R[2][0] # pitch
-    p_goal[5] = goal_R[0][0] # yaw 
-
+    p_goal[3] = goal_R[2][1]
+    p_goal[4] = goal_R[2][0]
+    p_goal[5] = goal_R[1][0]  # p_goal[3,4,5] = R31, R32, R21
+    print(p_goal[3], p_goal[4], p_goal[5])
     p = np.array(
-        [p[0], p[1], p[2], R[2][1], R[2][0], R[0][0]]
+        [p[0], p[1], p[2], R[2][1], R[2][0], R[1][0]]
     )  # shape miss match (6,1) # x,y,z R31, R32
 
     t_dot = p_goal[:6] - p
@@ -136,9 +145,8 @@ def simple_pseudo(
     i = 0
 
     start_time = time.time()
-    #J_func = dill.load(open(root + '/scripts/J_func_simp', "rb"))
-    J_func = dill.load(open('../param_save/J_func_simp', "rb"))
-
+    J_func = dill.load(open(root + "/param_save/J_func_simp", "rb"))
+    print(root + "/param_save/J_func_simp")
     print("start runnign\n")
     q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
     while True:
@@ -150,9 +158,9 @@ def simple_pseudo(
 
         p = FK(q_n0)[:3, -1]
         R = FK(q_n0)[:3, :-1]  # Rotation matrix
-
+        r31, r32, r21 = wrpy(q_n0)
         p = np.array(
-            [ p[0], p[1], p[2], R[2][1], R[2][0], R[0][0] ]
+            [p[0], p[1], p[2], R[2][1], R[2][0], R[1][0]]
         )  # shape miss match (6,1) # x,y,z R31, R32
 
         T = find_T(R)
@@ -172,7 +180,7 @@ def simple_pseudo(
         i += 1
         if i % 100 == 0:
             print(pos_num, i, " t_dot: ", t_dot.T)
-            # print("devi :", dxyz)
+            print("devi :", dxyz)
         if i > max_iteration:
             print("No convergence")
             break
@@ -226,10 +234,7 @@ def get_cnfs_null(method_fun, q0, kwargs=dict()):
         index=index,
     )
     pos_record.to_excel(
-        "../data/non_optimized_curved_v1.xlsx",
-        sheet_name="Sheet2",
-        float_format="%.3f",
-        header=True,
+        "../data/test.xlsx", sheet_name="Sheet2", float_format="%.3f", header=True
     )
 
 
