@@ -19,7 +19,7 @@ from tx90 import *
 def posture_read():
 
     df = pd.read_excel(
-        "../data/random_curve_pos.xlsx", header=None, names=None, index_col=None
+        "../data/curve_data_v2.xlsx", header=None, names=None, index_col=None
     )
     num_test = df.shape[0]
 
@@ -38,14 +38,14 @@ def posture_read():
 class OptimalIK(Tx90):
     def __init__(self, time_step, accuracy, max_iteration):
         self.K_ = 1.0
-        self.Kn_ = 0.001  # 0.001
+        self.Kn_ = 0.05  # 0.001
 
         self.root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
         self.Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93, 0.49]))
         self.time_step = time_step
         self.accuracy = accuracy
         self.max_iteration = max_iteration
-        self.c = np.array([0.001, 0.001, 0.001, 0.001, 0.001])  # Tikhonov # 0.1
+        self.c = np.array([0.00001, 0.00001, 0.00001, 0.00001, 0.00001])  # Tikhonov # 0.1
         self.F = np.array([-6.0, -6.0, 40.0, 0.0, 0.0, 0.0])
         self.init_q = np.array(
             [0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0]
@@ -84,7 +84,6 @@ class OptimalIK(Tx90):
 
         J_func = dill.load(open("../param_save/J_func_simp", "rb"))
         H_func = dill.load(open("../param_save/H_func_simp", "rb"))
-
         q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
         while True:
             if self.is_success(t_dot):
@@ -170,7 +169,7 @@ class OptimalIK(Tx90):
             index=index,
         )
         pos_record.to_excel(
-            self.root + "/data/opt_curve_v1.xlsx",
+            self.root + "/data/opt_curve2_v1.xlsx",
             sheet_name="Sheet2",
             float_format="%.3f",
             header=True,
@@ -184,5 +183,6 @@ if __name__ == "__main__":
     PosPlane = OptimalIK(0.5, 0.001, 500000)
     # test = np.array([0.361652, 1.35713, 0.69029, 4.3405, 0.95651, 2.16569, 0]))
     # PosPlane.fk(test)
-    # start = time.time()
+    start = time.time()
     PosPlane.get_cnfs_null(method_fun=PosPlane.null_space_method)
+    print("took ", start - time.time())

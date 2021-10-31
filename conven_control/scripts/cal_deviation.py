@@ -25,7 +25,7 @@ def fk(joint_params):
     dh_param4 = np.array([0.425, 0, -pi/2])
     dh_param5 = np.array([0, 0, pi/2])
     dh_param6 = np.array([0.1, 0, 0])
-    dh_param7 = np.array([0.1027, 0.1911, 0])
+    dh_param7 = np.array([0.1031, 0.17298, 0])
 
     T12 = Homgm(dh_param1, q1, offset=0)
     T23 = Homgm(dh_param2, q2, offset=-pi/2)
@@ -109,5 +109,5 @@ if __name__=="__main__":
     # # print("non opt:", dxyz)
     root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
 
-    cal_dev(root+'/data/non_optimized_curved_v1.xlsx')
+    cal_dev(root+'/data/ros_curve2_v1.xlsx')
     # cal_dev(root+'/data/optimized_result_fast_test.xlsx')
