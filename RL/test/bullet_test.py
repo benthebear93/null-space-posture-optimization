@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     joints, controlJoints = utils_tx90.setup_tx90(p, robotID) #get joints and controllable joints
     joint_init = [deg2rad(0), deg2rad(0), deg2rad(90), deg2rad(0), deg2rad(0), deg2rad(0)]
-    filename = ['ros_curve_v1.xlsx', 'opt_curve_v1.xlsx']
+    filename = ['test.xlsx', 'ros_flat_v2.xlsx']
     non_q = posture_read(filename[0])
     opt_q = posture_read(filename[1])
     num_test = len(non_q)

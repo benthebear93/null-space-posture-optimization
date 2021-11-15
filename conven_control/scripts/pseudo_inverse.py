@@ -18,7 +18,7 @@ root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
 def posture_read():
     # load_wb = load_workbook("C:/Users/UNIST/Desktop/stiffness_estimation/test_z.xlsx", data_only=True)
     df = pd.read_excel(
-        "../data/random_curve_pos.xlsx", header=None, names=None, index_col=None
+        "../data/flat_data_v2.xlsx", header=None, names=None, index_col=None
     )
     testCount = df.shape[0]
 
@@ -226,7 +226,7 @@ def get_cnfs_null(method_fun, q0, kwargs=dict()):
         index=index,
     )
     pos_record.to_excel(
-        "../data/non_optimized_curved_v1.xlsx",
+        "../data/teets.xlsx",
         sheet_name="Sheet2",
         float_format="%.3f",
         header=True,

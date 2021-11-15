@@ -15,6 +15,7 @@ from spatialmath import *
 import dill
 from tx90 import *
 
+# 2.76 0.4 0.3  kn = 0.02
 
 def posture_read():
 
@@ -37,15 +38,15 @@ def posture_read():
 
 class OptimalIK(Tx90):
     def __init__(self, time_step, accuracy, max_iteration):
-        self.K_ = 1.0
-        self.Kn_ = 0.05  # 0.001
+        self.K_ = 2.76
+        self.Kn_ = 0.02  # 0.001
 
         self.root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
         self.Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93, 0.49]))
         self.time_step = time_step
         self.accuracy = accuracy
         self.max_iteration = max_iteration
-        self.c = np.array([0.00001, 0.00001, 0.00001, 0.00001, 0.00001])  # Tikhonov # 0.1
+        self.c = np.array([0.00001, 0.00001, 0.00001, 0.00001, 0.00001])   # Tikhonov # 0.1
         self.F = np.array([-6.0, -6.0, 40.0, 0.0, 0.0, 0.0])
         self.init_q = np.array(
             [0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0.1745, 0]
@@ -81,11 +82,14 @@ class OptimalIK(Tx90):
         c = self.c
 
         i = 0
-
+        temp  =0
+        q_temp =0 
         J_func = dill.load(open("../param_save/J_func_simp", "rb"))
         H_func = dill.load(open("../param_save/H_func_simp", "rb"))
         q_dot = np.array([0, 0, 0, 0, 0, 0, 0])
+        time_st =0
         while True:
+            st = time.time()
             if self.is_success(t_dot):
                 print("Rotation: ", R)
                 break
@@ -117,13 +121,15 @@ class OptimalIK(Tx90):
             )  # + c.T@np.eye(5) (7,5)
             J_temp = J[:, :6] @ Ktheta_inv @ J[:, :6].T
             dxyz = J_temp @ self.F
-            if i % 100 == 0:
+            if i % 10 == 0:
                 print(posCount, i, " t_dot: ", t_dot.T)
-
+            endt = time.time()
+            time_st = endt-st
             q_dot = (
-                self.K_ * psd_J @ t_dot - self.Kn_ * (np.eye(7) - (psd_J @ J_na)) @ gH
+                2.76* psd_J @ t_dot + 0.4 * psd_J@t_dot + 0.3 *psd_J @(temp-t_dot) - self.Kn_ * (np.eye(7) - (psd_J @ J_na)) @ gH
             )  # 6x5 5x1    - (6x6-6x5 5x6) 7x1
-
+            temp = t_dot
+            q_temp = q_dot
             i += 1
             if i > self.max_iteration:
                 print("No convergence")
@@ -169,7 +175,7 @@ class OptimalIK(Tx90):
             index=index,
         )
         pos_record.to_excel(
-            self.root + "/data/opt_curve2_v1.xlsx",
+            self.root + "/data/test.xlsx",
             sheet_name="Sheet2",
             float_format="%.3f",
             header=True,
@@ -180,7 +186,7 @@ if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi
     pi_sym = sym.pi
-    PosPlane = OptimalIK(0.5, 0.001, 500000)
+    PosPlane = OptimalIK(0.1, 0.001, 500000)
     # test = np.array([0.361652, 1.35713, 0.69029, 4.3405, 0.95651, 2.16569, 0]))
     # PosPlane.fk(test)
     start = time.time()
