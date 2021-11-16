@@ -83,7 +83,7 @@ class Tx90:
             abs(error[0]) < accuracy
             and abs(error[1]) < accuracy
             and abs(error[2]) < accuracy
-            and abs(error[3]) < accuracy
-            and abs(error[4]) < accuracy
+            and abs(error[3]) < 0.0005
+            and abs(error[4]) < 0.0005
         ):
             return True

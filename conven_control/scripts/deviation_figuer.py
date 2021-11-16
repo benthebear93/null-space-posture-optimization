@@ -58,5 +58,5 @@ def stiffness_figure(opt_file, nonopt_file):
 
 
 if __name__ == "__main__":
-    filename = ["test.xlsx", "ros_flat_v2.xlsx"]
+    filename = ["test3.xlsx", "ros_flat_v2.xlsx"]
     stiffness_figure(filename[0], filename[1])
