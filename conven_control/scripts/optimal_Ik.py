@@ -19,7 +19,7 @@ from tx90 import *
 def posture_read():
 
     df = pd.read_excel(
-        "../data/flat_data_v2.xlsx", header=None, names=None, index_col=None
+        "../data/flat_data_v3.xlsx", header=None, names=None, index_col=None
     )
     num_test = df.shape[0]
 
@@ -37,8 +37,8 @@ def posture_read():
 
 class OptimalIK(Tx90):
     def __init__(self, time_step, accuracy, max_iteration):
-        self.K_ = 1.0
-        self.Kn_ = 0.05  # 0.001
+        self.K_ = 0.001
+        self.Kn_ = 0.02  # 0.001
 
         self.root = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
         self.Ktheta = np.diag(np.array([1.7, 5.9, 1.8, 0.29, 0.93, 0.49]))
@@ -169,7 +169,7 @@ class OptimalIK(Tx90):
             index=index,
         )
         pos_record.to_excel(
-            self.root + "/data/opt_curve2_v1.xlsx",
+            self.root + "/data/falt_testv1.xlsx",
             sheet_name="Sheet2",
             float_format="%.3f",
             header=True,
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     # Length of Links in meters
     pi = np.pi
     pi_sym = sym.pi
-    PosPlane = OptimalIK(0.5, 0.001, 500000)
+    PosPlane = OptimalIK(0.1, 0.001, 500000)
     # test = np.array([0.361652, 1.35713, 0.69029, 4.3405, 0.95651, 2.16569, 0]))
     # PosPlane.fk(test)
     start = time.time()
